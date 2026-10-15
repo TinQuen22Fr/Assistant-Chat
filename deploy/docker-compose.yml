@@ -1,0 +1,35 @@
+# Gemini Perso — déploiement Docker (alternative à systemd)
+# Depuis la racine du projet :
+#   cd frontend && yarn install && yarn build && cd ..
+#   docker compose -f deploy/docker-compose.yml up -d --build
+# Le Nginx de l'hôte (deploy/nginx.conf) sert frontend/build et proxifie /api vers 127.0.0.1:8001.
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    networks: [internal]
+
+  backend:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.backend
+    restart: unless-stopped
+    env_file: ../backend/.env
+    environment:
+      MONGO_URL: mongodb://mongo:27017
+      FILES_DIR: /data/files
+    volumes:
+      - files-data:/data/files
+    ports:
+      - "127.0.0.1:8001:8001"
+    depends_on: [mongo]
+    networks: [internal]
+
+volumes:
+  mongo-data:
+  files-data:
+
+networks:
+  internal:

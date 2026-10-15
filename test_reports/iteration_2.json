@@ -1,0 +1,34 @@
+{
+  "summary": "Phase 1 Gemini Perso: 18/18 pytest backend tests PASS and full Playwright UI flow PASS. Covered email/password login + register + logout + /me + /refresh + 401 French + 409 French + 429 brute-force lockout + /auth/config google_mode=emergent; conversations CRUD + search (title+content) + model switch + 422 invalid model; isolation (user2 gets 404 on GET/PATCH/DELETE/POST messages/download file + list excludes); streaming SSE events (meta/delta/done); multi-turn name recall ('Arthur'); PDF attached in msg1 recalled in msg3 ('ZEBRE-7731'); 413 oversized file (big.png 21MB) French; regenerate replaces last model msg; file ownership on download. UI: /login redirect for unauth, French labels, login+register+logout flow via test ids, send+stream+URL /c/<id>+auto-title, rename/delete with confirm, search filter, sidebar toggle, model-select-trigger per-conv persisted after reload, file-picker-input attaches PDF with message-file-chip, open-files-panel-button + files-panel listing+download link, oversized -> error-banner-container French (not attached), regenerate re-streams, answer-meta shows gemini-3-flash-preview / gemini-3.1-pro-preview, profile-menu + logout-button back to /login.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "AuthPage left panel", "issues": ["Hero text contrast is slightly low on #f0f4f9 pastel background; readable but minor."]},
+      {"screen": "Login first paint", "issues": ["google-login-button is briefly disabled until /api/auth/config resolves; cosmetic only."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_auth_and_chat.py",
+    "/app/test_reports/pytest/phase1_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "CORS_ORIGINS and FRONTEND_URL in backend/.env still point to the e78c2a96 host while REACT_APP_BACKEND_URL points to assistant-chat-1 — same ingress route works today, but a future cross-origin direct call (not through the ingress) would be blocked. Keep both in sync when preview host changes.",
+    "ChatPage.send runs after stripping prompt/files; if backend returns an error (e.g. 413) the UI re-fills prompt+files which is good — verified for oversized file.",
+    "attachments.load_attachment on each turn re-reads image from disk and re-normalises through Pillow for every stream turn; fine for a few MB but could be cached per message_id to shave latency for images on long conversations.",
+    "chat._stream_reply emits only one 'title' event on first done; if the title generation call fails it silently falls back to the first user message truncated to 80 chars — acceptable but no 'retry title' affordance.",
+    "No max-conversations or max-files-per-conversation cap; a user could create unlimited rows. Low priority but worth tracking."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_auth_and_chat.py"
+  ],
+  "success_rate": {"backend": "100% (18/18)", "frontend": "100%"},
+  "test_credentials": "test@geminiperso.fr / Test1234! (seeded) ; user2@geminiperso.fr / Test1234! (auto-created by test fixture)",
+  "seed_data_creation": "Created additional ephemeral TEST_* users and a few short conversations with /app/tests/fixtures/test.pdf. All created conversations are deleted at end of each test.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Run: pytest /app/backend/tests/test_auth_and_chat.py -v (uses REACT_APP_BACKEND_URL). Flash answers quickly (3-8s), pro is 10-30s — keep LLM calls minimal (<25). Google button is validated via code review only (preview requires real Emergent redirect, cannot be fully automated). Phase 0 test file /app/backend/tests/test_poc_chat.py is now stale (POC endpoints removed) — can be deleted.",
+  "rca of the issue": "N/A — no bugs found."
+}

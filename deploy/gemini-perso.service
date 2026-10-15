@@ -1,0 +1,25 @@
+# Gemini Perso — service systemd du backend FastAPI
+# Copier dans /etc/systemd/system/gemini-perso.service puis :
+#   systemctl daemon-reload && systemctl enable --now gemini-perso
+[Unit]
+Description=Gemini Perso (API FastAPI)
+After=network-online.target mongod.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=gemini
+Group=gemini
+WorkingDirectory=/opt/gemini-perso/backend
+EnvironmentFile=/opt/gemini-perso/backend/.env
+ExecStart=/opt/gemini-perso/venv/bin/uvicorn server:app --host 127.0.0.1 --port 8001 --workers 1 --proxy-headers --forwarded-allow-ips=127.0.0.1 --timeout-keep-alive 75
+Restart=always
+RestartSec=3
+# Durcissement
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/var/lib/gemini-perso /opt/gemini-perso/backend
+
+[Install]
+WantedBy=multi-user.target

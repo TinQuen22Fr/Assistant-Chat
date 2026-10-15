@@ -1,0 +1,157 @@
+{
+  "identity_and_concept": {
+    "project_name": "Gemini Perso",
+    "description": "Self-hostable clone of Google Gemini featuring an elegant, light-themed, French UI. Built as a sleek POC chat interface with model selection, document/image attachment handling with 20MB validation, progressive streamed response rendering, and crisp Google-inspired visuals.",
+    "theme_mode": "LIGHT ONLY",
+    "primary_language": "French (fr-FR)",
+    "design_archetype": "Organic & Soft Tech (Swiss & Soft Utility Hybrid)",
+    "vibe": "Airy, clean, intelligent, frictionless, responsive, Google Gemini aesthetic"
+  },
+  "typography": {
+    "heading_font": "Plus Jakarta Sans, sans-serif",
+    "body_font": "Inter, sans-serif",
+    "code_font": "JetBrains Mono, monospace",
+    "hierarchy": {
+      "app_title": "text-xl sm:text-2xl font-semibold tracking-tight text-slate-900",
+      "chat_heading": "text-2xl sm:text-3xl font-bold tracking-tight text-slate-900",
+      "message_user": "text-base font-normal leading-relaxed text-slate-900",
+      "message_assistant": "text-base font-normal leading-relaxed text-slate-800",
+      "label_overline": "text-xs font-semibold uppercase tracking-wider text-slate-500",
+      "caption": "text-xs font-medium text-slate-500",
+      "code_block": "text-sm font-mono leading-normal"
+    }
+  },
+  "colors": {
+    "background_page": "#F8FAFC",
+    "background_card": "#FFFFFF",
+    "background_input": "#F1F5F9",
+    "background_hover": "#E2E8F0",
+    "primary_blue": "#1A73E8",
+    "primary_blue_hover": "#1557B0",
+    "gemini_gradient": "linear-gradient(135deg, #4285F4 0%, #9333EA 50%, #EC4899 100%)",
+    "border_subtle": "#E2E8F0",
+    "border_focus": "#3B82F6",
+    "text_main": "#0F172A",
+    "text_muted": "#64748B",
+    "text_subtle": "#94A3B8",
+    "error_bg": "#FEF2F2",
+    "error_border": "#FCA5A5",
+    "error_text": "#991B1B",
+    "success_bg": "#F0FDF4",
+    "success_border": "#86EFAC",
+    "success_text": "#166534"
+  },
+  "french_ui_dictionary": {
+    "app_title": "Gemini Perso",
+    "app_subtitle": "Votre assistant IA personnel et sécurisé",
+    "model_select_label": "Modèle IA",
+    "models": {
+      "gemini_3_1_pro": "Gemini 3.1 Pro (Raisonnement avancé)",
+      "gemini_3_flash": "Gemini 3 Flash (Rapide & réactif)"
+    },
+    "welcome_message": "Bonjour ! Comment puis-je vous aider aujourd'hui ?",
+    "prompt_placeholder": "Demandez à Gemini ou déposez vos fichiers ici...",
+    "attachment_btn_tooltip": "Joindre des fichiers (PDF, DOCX, TXT, MD, PNG, JPG, WEBP - Max 20 Mo)",
+    "send_button": "Envoyer",
+    "stop_button": "Arrêter la génération",
+    "clear_chat": "Nouvelle discussion",
+    "error_file_size": "Le fichier « {filename} » dépasse la limite autorisée de 20 Mo ({filesize} Mo).",
+    "error_file_type": "Format de fichier non pris en charge. Formats acceptés : PDF, DOCX, TXT, MD, PNG, JPG, WEBP.",
+    "error_general": "Une erreur s'est produite lors de la génération de la réponse.",
+    "thinking_indicator": "Gemini réfléchit...",
+    "quick_prompts": [
+      "Résumer un document PDF ou texte",
+      "Rédiger un e-mail professionnel en français",
+      "Expliquer un concept technique complexe",
+      "Analyser et corriger un extrait de code"
+    ],
+    "disclaimer": "Gemini Perso peut faire des erreurs. Vérifiez les informations importantes."
+  },
+  "layout_and_structure": {
+    "container_max_width": "max-w-4xl mx-auto px-4 sm:px-6",
+    "header": {
+      "style": "sticky top-0 z-40 w-full border-b border-slate-200 bg-white/80 backdrop-blur-md px-4 py-3",
+      "elements": [
+        "Brand Logo with Google Gemini color sparkle gradient",
+        "App title 'Gemini Perso' & French badge 'Version POC'",
+        "Model select dropdown (Gemini 3.1 Pro / Gemini 3 Flash)",
+        "New Chat / Clear action button ('Nouvelle discussion')"
+      ]
+    },
+    "chat_area": {
+      "style": "flex-1 min-h-[calc(100vh-14rem)] py-6 space-y-6 pb-40",
+      "empty_state": "Hero greeting banner in French with animated gradient text and 4 interactive quick suggestion cards",
+      "message_bubble_user": "bg-slate-100 text-slate-900 rounded-2xl rounded-tr-sm px-5 py-3.5 max-w-[85%] self-end shadow-sm ml-auto border border-slate-200/60",
+      "message_bubble_assistant": "bg-white text-slate-800 rounded-2xl rounded-tl-sm px-6 py-5 max-w-full self-start shadow-sm border border-slate-200/80 space-y-3"
+    },
+    "input_dock": {
+      "style": "fixed bottom-0 left-0 right-0 bg-gradient-to-t from-slate-50 via-slate-50/90 to-transparent pt-4 pb-6 z-30",
+      "pill_box": "max-w-4xl mx-auto px-4 bg-white border border-slate-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-100 rounded-3xl shadow-lg transition-all duration-200 p-3",
+      "attachment_chips_container": "flex flex-wrap gap-2 px-2 pt-1 pb-2 border-b border-slate-100 mb-2",
+      "textarea": "w-full bg-transparent border-0 resize-none outline-none text-slate-900 placeholder:text-slate-400 text-base min-h-[44px] max-h-48 px-2 py-1"
+    }
+  },
+  "key_features_and_interactions": {
+    "model_selection": {
+      "options": [
+        {"id": "gemini-3.1-pro", "name": "Gemini 3.1 Pro", "badge": "Modèle Raisonnement", "desc": "Performance maximale pour tâches complexes"},
+        {"id": "gemini-3-flash", "name": "Gemini 3 Flash", "badge": "Ultra Rapide", "desc": "Réponses instantanées et fluides"}
+      ]
+    },
+    "file_attachment_system": {
+      "allowed_extensions": [".pdf", ".docx", ".txt", ".md", ".png", ".jpg", ".jpeg", ".webp"],
+      "max_size_bytes": 20971520,
+      "max_size_mb": 20,
+      "preview_chip": "Pill showing icon, truncated filename, file size, and remove button (X icon)",
+      "validation_behavior": "Immediate validation on file drop/select. If >20MB, trigger French error banner above input box with auto-dismiss or manual dismiss option."
+    },
+    "streaming_response": {
+      "mechanism": "Progressive character / chunk renderer simulation with typing state cursor",
+      "action_toggle": "Send button turns into glowing 'Arrêter' (Stop) button during streaming",
+      "markdown_support": "Full markdown rendering with headings, lists, bold text, blockquotes, code blocks with syntax highlighting and copy code button"
+    },
+    "error_handling": {
+      "banner_style": "bg-red-50 border-l-4 border-red-500 text-red-800 p-4 rounded-md shadow-sm mb-3 flex items-start gap-3 text-sm"
+    }
+  },
+  "data_testid_requirements": {
+    "app_header": "app-header",
+    "model_select_trigger": "model-select-trigger",
+    "model_select_option_pro": "model-select-option-pro",
+    "model_select_option_flash": "model-select-option-flash",
+    "clear_chat_button": "clear-chat-button",
+    "chat_messages_container": "chat-messages-container",
+    "user_message": "user-message-item",
+    "assistant_message": "assistant-message-item",
+    "streamed_answer": "streamed-answer-content",
+    "prompt_textarea": "prompt-textarea",
+    "file_picker_input": "file-picker-input",
+    "file_picker_button": "file-picker-button",
+    "file_chip": "file-chip",
+    "file_chip_remove": "file-chip-remove-button",
+    "send_button": "send-message-button",
+    "stop_button": "stop-generation-button",
+    "error_banner": "error-banner-container",
+    "error_banner_close": "error-banner-close-button",
+    "quick_prompt_chip": "quick-prompt-chip"
+  },
+  "instructions_to_main_agent": [
+    "Build a complete single-page React app (POC) matching Google Gemini's light theme aesthetic in FRENCH.",
+    "Strictly adhere to LIGHT theme (white/slate-50 background, clean shadows, slate text). DO NOT add dark mode theme toggles.",
+    "Implement model select switcher with options 'Gemini 3.1 Pro' and 'Gemini 3 Flash'.",
+    "Implement file attachment picker supporting PDF, DOCX, TXT, MD, PNG, JPG, WEBP with exact 20MB max file size check.",
+    "If a file > 20MB is attached, display a clear French error banner (e.g., 'Le fichier dépasse la limite de 20 Mo').",
+    "Implement file preview chips with remove button and file size indicator inside or right above the floating textarea dock.",
+    "Implement streamed answer simulation using intervals/SSE generator so markdown text appears progressively token-by-token.",
+    "Include a 'Arrêter' (Stop) button during streaming that cleanly halts response generation.",
+    "Use react-markdown or custom light markdown parser for rich text rendering including code snippets with Copy buttons.",
+    "Ensure every interactive component has exact data-testid attributes as specified in data_testid_requirements."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Strictly follow the light palette and Google Gemini subtle visual design.",
+    "Ensure generous spacing (p-4 to p-8) and rounded corners (rounded-2xl, rounded-3xl).",
+    "Ensure all text is strictly in French as requested.",
+    "Never center-align the main app layout text globally; keep user and assistant messages visually distinct.",
+    "Ensure interactive states (hover, focus, active) have proper accessible focus rings and contrast ratios."
+  ]
+}

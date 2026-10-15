@@ -1,0 +1,109 @@
+[
+  {
+    "header": "Gemini Apps",
+    "title": "Prompted Je m'appelle Camille et je prépare un marathon en avril",
+    "time": "2025-03-11T11:40:00.000Z",
+    "products": [
+      "Gemini Apps"
+    ],
+    "activityControls": [
+      "Gemini Apps Activity"
+    ],
+    "safeHtmlItem": [
+      {
+        "html": "<p>Super Camille ! Voici un plan d'entraînement sur 8 semaines.</p>"
+      }
+    ]
+  },
+  {
+    "header": "Gemini Apps",
+    "title": "Prompted Résume ce document",
+    "time": "2025-03-10T11:20:00.000Z",
+    "products": [
+      "Gemini Apps"
+    ],
+    "activityControls": [
+      "Gemini Apps Activity"
+    ],
+    "safeHtmlItem": [
+      {
+        "html": "<p>Le document décrit le budget du projet Hermès : 12 000 €.</p>"
+      }
+    ],
+    "attachedFiles": [
+      "budget_hermes.pdf"
+    ]
+  },
+  {
+    "header": "Gemini Apps",
+    "title": "Prompted Ajoute des tests unitaires",
+    "time": "2025-03-10T11:10:00.000Z",
+    "products": [
+      "Gemini Apps"
+    ],
+    "activityControls": [
+      "Gemini Apps Activity"
+    ],
+    "safeHtmlItem": [
+      {
+        "html": "<ul><li>test_vide</li><li>test_palindrome</li></ul>"
+      }
+    ]
+  },
+  {
+    "header": "Gemini Apps",
+    "title": "Prompted Écris une fonction Python qui inverse une chaîne",
+    "time": "2025-03-10T11:05:00.000Z",
+    "products": [
+      "Gemini Apps"
+    ],
+    "activityControls": [
+      "Gemini Apps Activity"
+    ],
+    "safeHtmlItem": [
+      {
+        "html": "<p>Voici :</p><pre><code>def inverser(s):\n    return s[::-1]</code></pre>"
+      }
+    ]
+  },
+  {
+    "header": "Gemini Apps",
+    "title": "Prompted Et combien d'habitants y vivent ?",
+    "time": "2025-03-10T09:05:00.000Z",
+    "products": [
+      "Gemini Apps"
+    ],
+    "activityControls": [
+      "Gemini Apps Activity"
+    ],
+    "safeHtmlItem": [
+      {
+        "html": "<p>Canberra compte environ <b>460 000</b> habitants.</p>"
+      }
+    ]
+  },
+  {
+    "header": "Gemini Apps",
+    "title": "Prompted Quelle est la capitale de l'Australie ?",
+    "time": "2025-03-10T09:00:00.000Z",
+    "products": [
+      "Gemini Apps"
+    ],
+    "activityControls": [
+      "Gemini Apps Activity"
+    ],
+    "safeHtmlItem": [
+      {
+        "html": "<p>La capitale de l'Australie est <b>Canberra</b>.</p>"
+      }
+    ]
+  },
+  {
+    "header": "Gemini Apps",
+    "title": "Used Gemini Apps",
+    "time": "2025-03-09T09:00:00.000Z",
+    "products": [
+      "Gemini Apps"
+    ]
+  }
+]

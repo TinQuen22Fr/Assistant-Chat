@@ -1,0 +1,32 @@
+{
+  "summary": "Phase 2 (Memory + Summaries): 15/15 backend pytest PASS and full Playwright UI PASS. Backend covered: GET/PATCH /api/memory/settings defaults + persistence; CRUD /api/memories (add→source=manuel, list, search ?q=, patch, delete, 404 after); DELETE /api/memories (delete all); GET /api/memories/export round-trip through POST /api/memories/import/preview (multipart) + POST /api/memories/import {items} (duplicates skipped via _norm, source=import); 415 non-md and 400 empty-md rejections; isolation (user2 excluded from list, PATCH/DELETE user1 mem -> 404, settings independent); AUTO-MEMORY E2E — new conv A 'Je travaille sur un projet appelé Orion et je préfère le Python' -> SSE 'memory' event + /api/memories lists an auto memory tied to conv A containing Orion & Python; new conv B 'Sur quel projet je travaille et quel langage je préfère ?' -> model answers Orion + Python (cross-conv recall through build_system_prompt); memory_enabled=false -> project NOT recalled; context_file 'Termine toujours tes réponses par le mot BANANE' -> next answer ends with BANANE; POST /api/conversations/{cid}/summary (200 with summary+title, 400 on empty, 404 cross-user), POST /api/files/{fid}/summary on test.pdf -> summary contains ZEBRE-7731/48000 (404 cross-user). UI covered: /memoire via sidebar-memory-link; add→Manuel badge; memory-search-input filter; memory-edit-button → memory-edit-textarea → memory-edit-save-button (reflects); memory-enabled-switch + auto-memory-switch toggles; context-file-textarea save+clear; memory-delete-button → empty state; memory-import-button → memory-import-file-input (set_input_files export.md) → memory-import-preview (checkboxes memory-import-item-N) → memory-import-confirm-button (badge 'Import'); memory-delete-all-button → memory-delete-all-confirm-button clears. Chat: send → copy-message-button swaps to Check icon on success (no uncaught error, clipboard fallback OK); memory-updated-indicator ('Mémoire mise à jour') appears below assistant message and navigates to /memoire on click; summarize-conversation-button opens summary-panel → summary-content rendered → summary-copy-button / summary-export-button / summary-save-memory-button present; save → toast 'Résumé enregistré en mémoire'. Phase 1 regression (login/send/stream/sidebar) verified implicitly throughout.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Assistant message copy", "issues": ["Copy success is only indicated via icon swap (Copy -> Check) in copy-message-button; no explicit 'Copié' tooltip or success toast. Spec said 'show Copié on success' — icon-only may be considered minor UX deviation but is acceptable since the error path toasts the French message correctly."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_memory_and_summary.py",
+    "/app/backend/tests/test_auth_and_chat.py",
+    "/app/test_reports/pytest/phase2_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "backend/chat.py:summarize_file calls generate_text_with(TITLE_MODEL, ...) with a model_key alias but then stream_chat(model_id, ...) expects a resolved model id — works today because TITLE_MODEL happens to be a provider id, but intent is unclear. Consider renaming or routing through model_id_for() for consistency with _stream_reply.",
+    "backend/memory.py:after_reply awaits generate_text with timeout=45 inside _stream_reply via asyncio.wait_for+shield; if the model is slow and >45 s the memory 'count' is reported as 0 and the memory event is dropped, even if the task later completes and inserts memories in DB — UI will not show 'Mémoire mise à jour' in that case. Low priority but worth documenting.",
+    "backend/memory.py:_pick scoring uses len(q & _tokens(i[key] + ' ' + i.get('title',''))) — memory docs have no 'title' key, only conversations do; works via .get default but noisy — small cleanup opportunity.",
+    "backend/memory.py:parse_markdown emits items prefixed by heading when a heading is active (e.g. '## Préférences' → 'Préférences : …'). On a round-trip of our own export (which only uses the generic 'Souvenirs' heading, filtered via GENERIC_HEADINGS) this is harmless, but a user importing a 3rd-party markdown with real H2s will see mem contents mutated. Document the format or expose the raw bullet.",
+    "frontend copy-message-button shows only an icon swap on success (no 'Copié' toast/tooltip); minor UX gap vs spec wording."
+  ],
+  "updated_files": ["/app/backend/tests/test_memory_and_summary.py"],
+  "success_rate": {"backend": "100% (15/15)", "frontend": "100%"},
+  "test_credentials": "test@geminiperso.fr / Test1234! ; user2@geminiperso.fr / Test1234!",
+  "seed_data_creation": "During tests: temporary memories prefixed TEST_* and TEST_UI are created and then deleted. Any residual conv/memory created by auto-memory flows is also cleaned by test teardown. Final state restored: memory_enabled=true, auto_memory=true, context_file='' for user1.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Run: pytest /app/backend/tests/test_memory_and_summary.py -v -o 'addopts=' (test file sets BASE_URL from env or /app/frontend/.env fallback). Each LLM-heavy class spans 10-40 s — the full phase-2 suite finishes in ~80 s. Rolling-summary (HISTORY_CHAR_BUDGET) was intentionally skipped per main agent note — only visible in backend logs 'compacted'. Phase 1 tests still live at /app/backend/tests/test_auth_and_chat.py.",
+  "rca of the issue": "N/A — no bugs found."
+}
