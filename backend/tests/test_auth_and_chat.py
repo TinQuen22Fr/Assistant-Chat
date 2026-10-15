@@ -5,9 +5,9 @@ import uuid
 import pytest
 import requests
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://assistant-chat-1.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "http://localhost:8010").rstrip("/")
 API = f"{BASE_URL}/api"
-FIX = "/app/tests/fixtures"
+FIX = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tests", "fixtures")
 
 TEST_EMAIL = "test@geminiperso.fr"
 TEST_PASSWORD = "Test1234!"
@@ -39,7 +39,7 @@ class TestAuth:
     def test_config(self):
         r = requests.get(f"{API}/auth/config")
         assert r.status_code == 200
-        assert r.json()["google_mode"] == "emergent"
+        assert r.json()["google_mode"] in ("oauth", "disabled")
 
     def test_login_success_cookies(self):
         s = requests.Session()

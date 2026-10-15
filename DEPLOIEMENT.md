@@ -63,8 +63,8 @@ sudo ln -s /opt/gemini-perso/app/frontend /opt/gemini-perso/frontend
 ```bash
 cd /opt/gemini-perso
 sudo -u gemini uv venv -p 3.12 /opt/gemini-perso/venv          # ou : python3 -m venv venv
-sudo -u gemini VIRTUAL_ENV=/opt/gemini-perso/venv uv pip install -r backend/requirements-selfhost.txt
-# (sans uv : sudo -u gemini venv/bin/pip install -r backend/requirements-selfhost.txt)
+sudo -u gemini VIRTUAL_ENV=/opt/gemini-perso/venv uv pip install -r backend/requirements.txt
+# (sans uv : sudo -u gemini venv/bin/pip install -r backend/requirements.txt)
 
 sudo -u gemini cp backend/.env.example backend/.env
 sudo -u gemini nano backend/.env
@@ -80,8 +80,7 @@ Variables essentielles dans `backend/.env` :
 | `CORS_ORIGINS`, `FRONTEND_URL` | `https://gemini.example.fr` |
 | `COOKIE_SECURE=true`, `COOKIE_SAMESITE=lax`, `COOKIE_DOMAIN=` | Cookies de session (HTTPS obligatoire) |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Votre compte, créé/mis à jour à chaque démarrage |
-| `GEMINI_API_KEY` | Clé Google AI Studio (voir section 12) — **obligatoire** |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | Connexion Google (section 11), optionnel |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | **obligatoire** |
 | `FILES_DIR` | `/var/lib/gemini-perso/files` (pièces jointes) |
 | `HISTORY_CHAR_BUDGET` | Taille d'historique avant résumé automatique (60000) |
 
@@ -89,7 +88,7 @@ Test rapide :
 
 ```bash
 cd /opt/gemini-perso/backend && sudo -u gemini ../venv/bin/uvicorn server:app --host 127.0.0.1 --port 8001
-curl -s http://127.0.0.1:8001/api/   # → {"message":"Gemini Perso API","provider":"google-genai"}
+curl -s http://127.0.0.1:8001/api/   # → {"message":"Gemini Perso API","provider":"google-account"}
 ```
 
 ## 7. Frontend : build de production
@@ -156,7 +155,7 @@ Copiez régulièrement `/var/backups/gemini-perso` hors du serveur (Dedibox Back
 
 ```bash
 cd /opt/gemini-perso/app && sudo -u gemini git pull
-sudo -u gemini VIRTUAL_ENV=/opt/gemini-perso/venv uv pip install -r backend/requirements-selfhost.txt
+sudo -u gemini VIRTUAL_ENV=/opt/gemini-perso/venv uv pip install -r backend/requirements.txt
 cd frontend && sudo -u gemini yarn install --frozen-lockfile && sudo -u gemini yarn build
 sudo systemctl restart gemini-perso
 ```
@@ -183,15 +182,7 @@ GOOGLE_CLIENT_SECRET=GOCSPX-xxxxxxxx
 GOOGLE_REDIRECT_URI=https://gemini.example.fr/api/auth/google/callback
 ```
 
-5. `sudo systemctl restart gemini-perso`. Le bouton « Se connecter avec Google » utilise alors votre propre client OAuth. Sans ces variables (et sans `EMERGENT_LLM_KEY`), le bouton Google est simplement masqué et seule la connexion e-mail/mot de passe est proposée. Un compte Google et un compte e-mail/mot de passe ayant la même adresse sont automatiquement liés.
-
-## 12. Clé Gemini et facturation
-
-1. Créez une clé sur [Google AI Studio → API keys](https://aistudio.google.com/apikey) (rattachée à un projet Google Cloud).
-2. Renseignez-la dans `GEMINI_API_KEY` puis redémarrez le service. Au démarrage, `GET /api/` doit indiquer `"provider":"google-genai"`.
-3. **Quotas** : l'offre gratuite est limitée et **Gemini 3.1 Pro n'y est généralement pas disponible** (erreur 429 « Quota exceeded … FreeTier »). Dans ce cas l'application affiche « Quota Google dépassé pour ce modèle » et propose de réessayer avec Gemini 3 Flash.
-4. Pour lever ces limites : AI Studio → **Billing** (ou Cloud Console → Facturation) → associez un compte de facturation au projet de la clé. Suivez votre consommation dans AI Studio (« Usage ») et définissez une alerte budgétaire dans la Cloud Console.
-5. Coût indicatif : chaque réponse déclenche aussi 1 à 2 petits appels Gemini 3 Flash (titre, résumé de discussion, extraction de mémoire). Les fichiers joints sont renvoyés au modèle à chaque tour de la discussion.
+5. `sudo systemctl restart gemini-perso`. Le bouton « Se connecter avec Google » utilise alors votre propre client OAuth. Sans ces variables, le bouton Google est simplement masqué et seule la connexion e-mail/mot de passe est proposée. Un compte Google et un compte e-mail/mot de passe ayant la même adresse sont automatiquement liés.
 
 ## 13. Dépannage
 

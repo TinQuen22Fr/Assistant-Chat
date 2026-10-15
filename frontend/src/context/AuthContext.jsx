@@ -16,8 +16,6 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    // Retour OAuth : AuthCallback se charge de l'échange du session_id
-    if (window.location.hash.includes("session_id=")) return;
     check();
   }, [check]);
 

@@ -14,17 +14,11 @@ export const GoogleButton = () => {
   const [mode, setMode] = useState(null);
 
   useEffect(() => {
-    apiJson("/auth/config").then((c) => setMode(c.google_mode)).catch(() => setMode("emergent"));
+    apiJson("/auth/config").then((c) => setMode(c.google_mode)).catch(() => setMode("disabled"));
   }, []);
 
   const start = () => {
-    if (mode === "oauth") {
-      window.location.href = `${API}/auth/google/login`;
-      return;
-    }
-    // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-    const redirectUrl = window.location.origin + "/";
-    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+    window.location.href = `${API}/auth/google/login`;
   };
 
   if (mode === "disabled") return null;

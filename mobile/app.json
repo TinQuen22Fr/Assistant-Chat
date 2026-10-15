@@ -9,14 +9,14 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.emergent.assistantchat.aozdrd"
+      "bundleIdentifier": "com.forge.geminiperso"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#000000"
       },
-      "package": "com.emergent.assistantchat.aozdrd"
+      "package": "com.forge.geminiperso"
     },
     "web": {
       "bundler": "metro",

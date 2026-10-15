@@ -1,9 +1,8 @@
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { ConversationsProvider } from "@/context/ConversationsContext";
 import AuthPage from "@/pages/AuthPage";
-import AuthCallback from "@/pages/AuthCallback";
 import ChatPage from "@/pages/ChatPage";
 import MemoryPage from "@/pages/MemoryPage";
 import ImportPage from "@/pages/ImportPage";
@@ -30,9 +29,6 @@ const PublicOnly = ({ children }) => {
 };
 
 function AppRouter() {
-  const location = useLocation();
-  // Détection synchrone du retour Google (avant toute vérification de session)
-  if (location.hash?.includes("session_id=")) return <AuthCallback />;
   return (
     <Routes>
       <Route path="/login" element={<PublicOnly><AuthPage /></PublicOnly>} />

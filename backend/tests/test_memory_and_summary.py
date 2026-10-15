@@ -6,10 +6,9 @@ import time
 import pytest
 import requests
 
-BASE_URL = (os.environ.get("REACT_APP_BACKEND_URL")
-            or open("/app/frontend/.env").read().split("REACT_APP_BACKEND_URL=")[1].splitlines()[0]).rstrip("/")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "http://localhost:8010").rstrip("/")
 API = f"{BASE_URL}/api"
-FIX = "/app/tests/fixtures"
+FIX = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tests", "fixtures")
 
 TEST_EMAIL = "test@geminiperso.fr"
 TEST_PASSWORD = "Test1234!"

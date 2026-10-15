@@ -62,8 +62,6 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "@emergentbase/overlay": "https://assets.emergent.sh/npm/emergentbase-overlay-0.1.31.tgz",
-    "@emergentbase/visual-edits": "https://assets.emergent.sh/npm/emergentbase-visual-edits-1.0.12.tgz",
     "@eslint/js": "9.23.0",
     "@vitejs/plugin-react": "^4",
     "autoprefixer": "^10.4.20",

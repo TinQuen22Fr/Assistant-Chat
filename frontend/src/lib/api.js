@@ -1,4 +1,4 @@
-export const API = `${import.meta.env.VITE_BACKEND_URL ?? import.meta.env.REACT_APP_BACKEND_URL ?? ""}/api`;
+export const API = "/api";
 
 const GENERIC_ERROR = "Une erreur s'est produite. Veuillez réessayer.";
 const NO_REFRESH = ["/auth/refresh", "/auth/login", "/auth/register", "/auth/logout"];

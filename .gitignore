@@ -86,10 +86,22 @@ mobile/.expo/
 mobile/.metro-cache/
 
 # overlay black-box crash/user-report dumps — session data, never history
-**/.emergent/recordings/
 .env
 .env.*
 *.env
 credentials.json
 *.key
 .credentials
+
+# Sécurité & Identité
+.gitconfig
+tests/fixtures/c1
+tests/fixtures/c2
+tests/fixtures/takeout/c1
+!tests/fixtures/**/*.zip
+
+# Artefacts locaux (contexte Forge, caches npm, build front, données runtime)
+.forge-context
+.npm-cache/
+frontend/build/
+backend/data/

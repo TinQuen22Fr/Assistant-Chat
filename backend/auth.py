@@ -20,7 +20,6 @@ ACCESS_TTL = timedelta(minutes=15)
 REFRESH_TTL = timedelta(days=7)
 MAX_ATTEMPTS = 5
 LOCKOUT = timedelta(minutes=15)
-EMERGENT_SESSION_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo"
@@ -126,8 +125,7 @@ async def upsert_google_user(email: str, name: str | None, picture: str | None) 
 def google_mode() -> str:
     if os.environ.get("GOOGLE_CLIENT_ID") and os.environ.get("GOOGLE_CLIENT_SECRET"):
         return "oauth"
-    # Emergent-managed Google login only exists on the Emergent preview environment
-    return "emergent" if os.environ.get("EMERGENT_LLM_KEY") else "disabled"
+    return "disabled"
 
 
 def _client_ip(request: Request) -> str:
@@ -146,10 +144,6 @@ class RegisterIn(BaseModel):
 class LoginIn(BaseModel):
     email: EmailStr
     password: str
-
-
-class EmergentSessionIn(BaseModel):
-    session_id: str
 
 
 # ---------- email / password ----------
@@ -230,20 +224,6 @@ async def refresh(request: Request, response: Response):
     user = await db.users.find_one({"user_id": _decode(token, "refresh")}, {"_id": 0})
     if not user:
         raise HTTPException(401, "Utilisateur introuvable.")
-    set_auth_cookies(response, user["user_id"])
-    return public_user(user)
-
-
-# ---------- Google: Emergent-managed (preview) ----------
-
-@router.post("/google/emergent")
-async def google_emergent(body: EmergentSessionIn, response: Response):
-    async with httpx.AsyncClient(timeout=15) as client:
-        res = await client.get(EMERGENT_SESSION_URL, headers={"X-Session-ID": body.session_id})
-    if res.status_code != 200:
-        raise HTTPException(401, "Connexion Google invalide ou expirée.")
-    data = res.json()
-    user = await upsert_google_user(data["email"], data.get("name"), data.get("picture"))
     set_auth_cookies(response, user["user_id"])
     return public_user(user)
 

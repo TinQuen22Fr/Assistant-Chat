@@ -10,8 +10,8 @@ import requests
 from dotenv import dotenv_values
 
 BASE_URL = (os.environ.get("REACT_APP_BACKEND_URL")
-            or dotenv_values(Path(__file__).resolve().parents[2] / "frontend" / ".env").get("REACT_APP_BACKEND_URL")
-            ).rstrip("/")
+            or dotenv_values(Path(__file__).resolve().parents[2] / "frontend" / ".env").get("VITE_BACKEND_URL")
+            or "http://localhost:8010").rstrip("/")
 API = BASE_URL + "/api"
 FIXT = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "takeout"
 
@@ -55,7 +55,7 @@ class TestDeploy:
         assert r.status_code == 200
         assert "markdown" in r.headers["content-type"]
         assert "Créer votre identifiant Google OAuth" in r.text
-        assert "Clé Gemini et facturation" in r.text
+        assert "google-account" in r.text
 
     def test_bundle(self, s1):
         r = s1.get(f"{API}/deploy/bundle", timeout=20)
@@ -67,7 +67,7 @@ class TestDeploy:
                     "gemini-perso-deploy/deploy/nginx.conf",
                     "gemini-perso-deploy/deploy/gemini-perso.service",
                     "gemini-perso-deploy/deploy/docker-compose.yml",
-                    "gemini-perso-deploy/backend/requirements-selfhost.txt",
+                    "gemini-perso-deploy/backend/requirements.txt",
                     "gemini-perso-deploy/backend/.env.example",
                     "gemini-perso-deploy/frontend/.env.example"]:
             assert rel in names, f"missing {rel} in bundle"
@@ -220,7 +220,7 @@ class TestImportCommit:
 # ---------- auth config / smoke ----------
 
 class TestSmoke:
-    def test_auth_config_emergent(self, s1):
+    def test_auth_config(self, s1):
         r = s1.get(f"{API}/auth/config", timeout=20)
         assert r.status_code == 200
-        assert r.json()["google_mode"] == "emergent"
+        assert r.json()["google_mode"] in ("oauth", "disabled")

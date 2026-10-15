@@ -4,7 +4,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv(Path(__file__).parent / ".env")
+load_dotenv(Path(__file__).parent / ".env", override=True)
 
 from fastapi import FastAPI  # noqa: E402
 from starlette.middleware.cors import CORSMiddleware  # noqa: E402
@@ -41,7 +41,7 @@ app.include_router(memory_router)
 app.include_router(imports_router)
 
 REPO_DIR = Path(__file__).resolve().parent.parent
-BUNDLE_FILES = ["DEPLOIEMENT.md", "backend/requirements-selfhost.txt", "backend/.env.example",
+BUNDLE_FILES = ["DEPLOIEMENT.md", "backend/requirements.txt", "backend/.env.example",
                 "frontend/.env.example", "deploy/nginx.conf", "deploy/gemini-perso.service",
                 "deploy/docker-compose.yml", "deploy/Dockerfile.backend", "deploy/backup.sh"]
 
@@ -76,8 +76,8 @@ async def startup():
     await create_indexes()
     await seed_test_user()
     cleanup_sessions()
-    if active_provider() == "emergent" and not os.environ.get("EMERGENT_LLM_KEY"):
-        logging.getLogger("gemini-perso").warning("Ni GEMINI_API_KEY ni EMERGENT_LLM_KEY définie : le chat ne fonctionnera pas.")
+    if active_provider() != "google-account":
+        logging.getLogger("gemini-perso").warning("Session compte Google non active : le chat ne fonctionnera pas.")
 
 
 @app.on_event("shutdown")
