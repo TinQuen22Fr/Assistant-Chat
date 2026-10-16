@@ -43,7 +43,7 @@ sudo systemctl status mongod --no-pager
 sudo mkdir -p /opt/gemini-perso
 sudo chown -R "$USER":"$USER" /opt/gemini-perso
 cd /opt/gemini-perso
-git clone https://github.com/TinQuen22Fr/Assistant-Chat.git .
+git clone --branch Make-With-Forge https://github.com/TinQuen22Fr/Assistant-Chat.git .
 ```
 
 ---
