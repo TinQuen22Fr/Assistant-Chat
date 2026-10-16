@@ -82,7 +82,7 @@ async def takeout_preview(file: UploadFile = File(...), user: dict = Depends(get
 def _messages_for(entries: list[dict], cid: str, uid: str) -> list[dict]:
     docs = []
     for e in entries:
-        t = datetime.fromisoformat(e["time"])
+        t = datetime.fromisoformat(e["time"]).astimezone(timezone.utc).replace(microsecond=0)
         prompt = e["prompt"] or "(Requête non disponible dans l'export)"
         if e.get("files"):
             prompt += "\n\n[Fichiers joints dans Gemini : " + ", ".join(e["files"]) + "]"
@@ -114,7 +114,7 @@ async def takeout_commit(sid: str, body: CommitIn, user: dict = Depends(get_curr
         if not fresh:
             skipped += 1
             continue
-        end = datetime.fromisoformat(g["end"])
+        end = datetime.fromisoformat(g["end"]).astimezone(timezone.utc).replace(microsecond=0)
         if existing:
             ref = await db.messages.find_one({"user_id": uid, "import_key": {"$in": list(existing)}}, {"conversation_id": 1})
             cid = ref["conversation_id"]
@@ -125,7 +125,7 @@ async def takeout_commit(sid: str, body: CommitIn, user: dict = Depends(get_curr
             await db.conversations.insert_one({
                 "id": cid, "user_id": uid, "title": g["title"], "titled": True, "model": "flash",
                 "imported": True, "import_source": "takeout",
-                "created_at": datetime.fromisoformat(g["start"]), "updated_at": end,
+                "created_at": datetime.fromisoformat(g["start"]).astimezone(timezone.utc).replace(microsecond=0), "updated_at": end,
             })
             created += 1
             new_ids.append(cid)

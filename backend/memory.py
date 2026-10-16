@@ -29,7 +29,7 @@ STOPWORDS = set(
 
 
 def now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(timezone.utc).replace(microsecond=0)
 
 
 # ---------- schemas ----------
