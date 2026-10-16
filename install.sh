@@ -122,6 +122,19 @@ command -v git      >/dev/null || die "git introuvable."
 command -v nginx    >/dev/null || { [ "$DO_NGINX" = "1" ] && die "nginx introuvable."; }
 command -v certbot  >/dev/null || { [ "$DO_CERTBOT" = "1" ] && [ "$DO_NGINX" = "1" ] && c_warn "certbot introuvable : HTTPS non active."; DO_CERTBOT=0; }
 
+# Nginx >= 1.25.1 : la directive "listen ... http2" est depreciee, il faut une
+# directive "http2 on;" separee. On detecte la version pour generer un vhost
+# sans warning sur les Nginx recents tout en restant compatible 1.18 -> 1.24.
+NGINX_HTTP2_MODE="listen"
+if command -v nginx >/dev/null 2>&1; then
+  NGINX_VERSION="$(nginx -v 2>&1 | sed -n 's#.*nginx/\([0-9][0-9.]*\).*#\1#p')"
+  NGINX_NEW_HTTP2="$(printf '%s\n%s\n' "1.25.1" "$NGINX_VERSION" | sort -V | head -1)"
+  if [ -n "$NGINX_VERSION" ] && [ "$NGINX_NEW_HTTP2" = "1.25.1" ]; then
+    NGINX_HTTP2_MODE="directive"
+  fi
+  c_ok "Nginx $NGINX_VERSION detecte (mode http2 : $NGINX_HTTP2_MODE)."
+fi
+
 # --- Utilisateur systeme ------------------------------------------------------
 if ! id -u "$APP_USER" >/dev/null 2>&1; then
   c_info "Creation de l'utilisateur systeme $APP_USER ..."
@@ -397,11 +410,20 @@ NGINX_ACME
 
   if [ "$CERT_OK" = "1" ]; then
     c_info "Installation du vhost HTTPS complet ..."
+    TMP_NGINX="$(mktemp)"
     sed \
       -e "s|gemini.example.fr|$DOMAIN|g" \
       -e "s|/opt/gemini-perso|$APP_DIR|g" \
       -e "s|127.0.0.1:8001|127.0.0.1:$BACKEND_PORT|g" \
-      "$DEPLOY_DIR/nginx.conf" > "$NGINX_AVAIL"
+      "$DEPLOY_DIR/nginx.conf" > "$TMP_NGINX"
+    if [ "$NGINX_HTTP2_MODE" = "directive" ]; then
+      # Nginx recent : "listen 443 ssl;" + "http2 on;" (pas de warning).
+      sed -i \
+        -e "s|^\( *\)listen 443 ssl http2;|\1listen 443 ssl;\n\1http2 on;|" \
+        -e "s|^\( *\)listen \[::\]:443 ssl http2;|\1listen [::]:443 ssl;|" \
+        "$TMP_NGINX"
+    fi
+    mv "$TMP_NGINX" "$NGINX_AVAIL"
     nginx -t && systemctl reload nginx
     c_ok "Nginx configure : https://$DOMAIN"
   fi

@@ -241,6 +241,16 @@ c_step "Nginx"
 SITE="${SITE_NAME:-gemini-perso}"
 NGINX_AVAIL="/etc/nginx/sites-available/$SITE"
 DOMAIN="${DOMAIN:-gemini-memory-assistant.quentin-astro.fr}"
+# Nginx >= 1.25.1 : "listen ... http2" est deprecie -> "http2 on;". On applique
+# la meme regle qu'install.sh pour que la comparaison au gabarit reste exacte.
+NGINX_HTTP2_MODE="listen"
+if command -v nginx >/dev/null 2>&1; then
+  NGINX_VERSION="$(nginx -v 2>&1 | sed -n 's#.*nginx/\([0-9][0-9.]*\).*#\1#p')"
+  NGINX_NEW_HTTP2="$(printf '%s\n%s\n' "1.25.1" "$NGINX_VERSION" | sort -V | head -1)"
+  if [ -n "$NGINX_VERSION" ] && [ "$NGINX_NEW_HTTP2" = "1.25.1" ]; then
+    NGINX_HTTP2_MODE="directive"
+  fi
+fi
 if [ -f "$NGINX_AVAIL" ] && grep -q "$DOMAIN" "$NGINX_AVAIL"; then
   # On ne reecrit jamais un vhost en place : on signale simplement les changements.
   if [ -f "$DEPLOY_DIR/nginx.conf" ]; then
@@ -250,6 +260,12 @@ if [ -f "$NGINX_AVAIL" ] && grep -q "$DOMAIN" "$NGINX_AVAIL"; then
       -e "s|/opt/gemini-perso|$APP_DIR|g" \
       -e "s|127.0.0.1:8001|127.0.0.1:$BACKEND_PORT|g" \
       "$DEPLOY_DIR/nginx.conf" > "$TMP_NGINX"
+    if [ "$NGINX_HTTP2_MODE" = "directive" ]; then
+      sed -i \
+        -e "s|^\( *\)listen 443 ssl http2;|\1listen 443 ssl;\n\1http2 on;|" \
+        -e "s|^\( *\)listen \[::\]:443 ssl http2;|\1listen [::]:443 ssl;|" \
+        "$TMP_NGINX"
+    fi
     if diff -q "$TMP_NGINX" "$NGINX_AVAIL" >/dev/null 2>&1; then
       c_ok "vhost Nginx a jour"
     else
