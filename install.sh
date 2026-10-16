@@ -14,6 +14,8 @@
 #   sudo bash install.sh
 #   sudo bash install.sh --domain gemini-memory-assistant.quentin-astro.fr
 #   sudo bash install.sh --branch Make-With-Forge
+#   sudo bash install.sh --env-source /opt/gemini-perso/backend/.env
+#   sudo bash install.sh --forge-workspace /var/www/forge/workspace/Assistant-Chat
 #   sudo bash install.sh --skip-nginx
 #
 set -euo pipefail
@@ -31,10 +33,13 @@ APP_USER="${APP_USER:-gemini}"
 BACKEND_PORT="${BACKEND_PORT:-8001}"
 VENV_DIR="${VENV_DIR:-$APP_DIR/venv}"
 DATA_DIR="${DATA_DIR:-/var/lib/gemini-perso}"
+# Workspace Forge sur le serveur : contient le .env de production a copier.
+FORGE_WORKSPACE="${FORGE_WORKSPACE:-/var/www/forge/workspace/Assistant-Chat}"
 # Branche de travail GitHub : les ajouts/corrections futurs y seront merges.
 WORK_BRANCH="${WORK_BRANCH:-Make-With-Forge}"
 
 BRANCH="${BRANCH:-}"
+ENV_SOURCE="${ENV_SOURCE:-}"
 DO_NGINX=1
 DO_CERTBOT=1
 
@@ -54,6 +59,8 @@ while [ $# -gt 0 ]; do
     --service)     SERVICE_NAME="${2:-}"; shift ;;
     --site-name)   SITE_NAME="${2:-}"; shift ;;
     --skip-nginx)  DO_NGINX=0 ;;
+    --env-source)  ENV_SOURCE="${2:-}"; shift ;;
+    --forge-workspace) FORGE_WORKSPACE="${2:-}"; shift ;;
     --skip-certbot) DO_CERTBOT=0 ;;
     -h|--help)     sed -n '1,40p' "$0"; exit 0 ;;
     *) echo "Option inconnue : $1"; exit 1 ;;
@@ -68,6 +75,7 @@ c_info "Domaine       : $DOMAIN"
 c_info "Repertoire    : $APP_DIR"
 c_info "Service       : $SERVICE_NAME (port $BACKEND_PORT)"
 c_info "Branche Git   : ${BRANCH:-$WORK_BRANCH} (courante: $(git -C "$APP_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?'))"
+c_info "Workspace Forge: $FORGE_WORKSPACE (source .env)"
 
 # --- Branche de travail GitHub -----------------------------------------------
 # Detection automatique : la branche de travail du depot (WORK_BRANCH) est
@@ -145,11 +153,37 @@ PY
 }
 
 ENV_FILE="$BACKEND_DIR/.env"
-if [ ! -f "$ENV_FILE" ]; then
-  c_warn ".env absent : creation depuis .env.example"
-  cp "$BACKEND_DIR/.env.example" "$ENV_FILE"
-  chmod 600 "$ENV_FILE"
 
+# Le .env de production est fourni directement sur le serveur. Tout se fait
+# sur place, sur la Dedibox. Sources possibles, dans l'ordre :
+#   1. --env-source <fichier>            (chemin absolu sur la Dedibox)
+#   2. $APP_DIR/.env.production          (depose dans /opt/gemini-perso)
+#   3. $FORGE_WORKSPACE/backend/.env     (workspace Forge du serveur)
+#   4. $BACKEND_DIR/.env.example         (gabarit, valeurs a verifier ensuite)
+ENV_CREATED=0
+if [ ! -f "$ENV_FILE" ]; then
+  if [ -n "$ENV_SOURCE" ]; then
+    [ -f "$ENV_SOURCE" ] || die "ENV_SOURCE introuvable : $ENV_SOURCE"
+    c_info "Copie du .env depuis $ENV_SOURCE ..."
+    install -o "$APP_USER" -g "$APP_USER" -m 600 "$ENV_SOURCE" "$ENV_FILE"
+  elif [ -f "$APP_DIR/.env.production" ]; then
+    c_info "Copie du .env depuis $APP_DIR/.env.production ..."
+    install -o "$APP_USER" -g "$APP_USER" -m 600 "$APP_DIR/.env.production" "$ENV_FILE"
+  elif [ -f "$FORGE_WORKSPACE/backend/.env" ]; then
+    c_info "Copie du .env depuis le workspace Forge : $FORGE_WORKSPACE/backend/.env ..."
+    install -o "$APP_USER" -g "$APP_USER" -m 600 "$FORGE_WORKSPACE/backend/.env" "$ENV_FILE"
+  elif [ -f "$BACKEND_DIR/.env.example" ]; then
+    c_warn ".env absent : creation depuis .env.example (VERIFIEZ ses valeurs)"
+    cp "$BACKEND_DIR/.env.example" "$ENV_FILE"
+    chmod 600 "$ENV_FILE"
+  else
+    die "Aucun .env fourni. Deposez $APP_DIR/.env.production, le workspace Forge ($FORGE_WORKSPACE/backend/.env) ou passez --env-source <fichier>, puis relancez."
+  fi
+  ENV_CREATED=1
+fi
+
+# Un .env existant n'est jamais modifie. Seule une creation neuve est completee.
+if [ "$ENV_CREATED" = "1" ]; then
   JWT="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
   set_env_key "$ENV_FILE" "JWT_SECRET" "$JWT"
   set_env_key "$ENV_FILE" "PUBLIC_URL" "https://$DOMAIN"
@@ -184,9 +218,8 @@ if [ ! -f "$ENV_FILE" ]; then
   c_warn "VERIFIEZ $ENV_FILE (MONGO_URL, secrets, Google OAuth) puis relancez si besoin."
 else
   c_ok ".env deja present (non modifie)."
-  chmod 600 "$ENV_FILE" 2>/dev/null || true
 fi
-
+chmod 600 "$ENV_FILE" 2>/dev/null || true
 # --- Frontend : build de production -------------------------------------------
 c_info "Frontend : installation des dependances ..."
 chown -R "$APP_USER":"$APP_USER" "$FRONTEND_DIR" 2>/dev/null || true

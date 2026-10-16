@@ -48,25 +48,28 @@ git clone --branch Make-With-Forge https://github.com/TinQuen22Fr/Assistant-Chat
 
 ---
 
-## 3. Fournir le `.env` de production (via SSH)
+## 3. Fournir le `.env` de production (directement sur le serveur)
 
-Les fichiers `.env.example` ne sont **pas** versionnés dans Git. Le `.env` réel doit donc être copié depuis votre poste **avant** de lancer `install.sh`.
+Tout se fait **sur la Dedibox**. Le `.env` de production est recupere par un simple `cp` depuis le **workspace Forge du serveur** vers le repertoire cible.
 
-```bash
-# Depuis VOTRE poste (pas la Dedibox) :
-scp backend/.env <USER>@<IP_DEDIBOX>:/tmp/gemini-perso.env
-```
-
-Puis **sur la Dedibox**, placer le fichier et adapter les clés suivantes au domaine de production :
+Le workspace Forge du serveur contient deja le `.env` de production (depose par Forge). Il suffit de le copier a l'emplacement attendu :
 
 ```bash
-sudo install -o "$USER" -g "$USER" -m 600 /tmp/gemini-perso.env /opt/gemini-perso/backend/.env
-sudo rm -f /tmp/gemini-perso.env
-cd /opt/gemini-perso
-nano backend/.env
+# Copie directe depuis le workspace Forge du serveur :
+cp /var/www/forge/workspace/Assistant-Chat/backend/.env /opt/gemini-perso/.env.production
 ```
 
-Clés à adapter (les valeurs indiquent la cible prod) :
+`install.sh` cherche un `.env` dans cet ordre (le premier trouve est copie vers `backend/.env`, sans jamais ecraser un `.env` existant) :
+
+1. `--env-source <fichier>` (chemin absolu sur la Dedibox)
+2. `/opt/gemini-perso/.env.production`
+3. `/var/www/forge/workspace/Assistant-Chat/backend/.env` (workspace Forge du serveur)
+4. `backend/.env.example` (gabarit, a verifier ensuite)
+
+> Le chemin du workspace Forge est surchargeable :
+> `sudo bash install.sh --forge-workspace /var/www/forge/workspace/Assistant-Chat ...`
+
+Clés à renseigner/vérifier avant lancement (valeurs cible prod) :
 
 ```ini
 PUBLIC_URL=https://gemini-memory-assistant.quentin-astro.fr
@@ -88,6 +91,8 @@ FILES_DIR=/var/lib/gemini-perso/files
 ```bash
 cd /opt/gemini-perso
 sudo bash install.sh --domain gemini-memory-assistant.quentin-astro.fr --branch Make-With-Forge
+# avec un .env à un autre emplacement :
+# sudo bash install.sh --env-source /chemin/vers/env.backend ...
 ```
 
 Ce que fait `install.sh` :
