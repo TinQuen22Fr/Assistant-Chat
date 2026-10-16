@@ -80,6 +80,10 @@ c_info "Workspace Forge: $FORGE_WORKSPACE (source .env)"
 # --- Branche de travail GitHub -----------------------------------------------
 # Detection automatique : la branche de travail du depot (WORK_BRANCH) est
 # utilisee si elle existe sur origin ; sinon on conserve la branche courante.
+# Le depot peut avoir ete clone par un utilisateur non-root (ex. quentin) :
+# on declare le dossier sur pour git afin d'eviter "dubious ownership".
+git config --global --get-all safe.directory 2>/dev/null | grep -qx "$APP_DIR" ||
+  git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
 git -C "$APP_DIR" fetch origin --prune >/dev/null 2>&1 || true
 CUR_BRANCH="$(git -C "$APP_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
 
@@ -121,6 +125,13 @@ fi
 mkdir -p "$DATA_DIR/files"
 chown -R "$APP_USER":"$APP_USER" "$DATA_DIR"
 
+# Le depot peut avoir ete clone par un autre utilisateur (ex. quentin) : les
+# repertoires dans lesquels l'utilisateur applicatif ecrit doivent lui
+# appartenir, sinon python3 -m venv echoue en "Permission denied".
+chown -R "$APP_USER":"$APP_USER" "$BACKEND_DIR" 2>/dev/null || true
+install -d -o "$APP_USER" -g "$APP_USER" -m 0755 "$VENV_DIR"
+chown -R "$APP_USER":"$APP_USER" "$VENV_DIR" 2>/dev/null || true
+
 # --- Backend : venv + dependances ---------------------------------------------
 c_info "Backend : environnement virtuel ..."
 if [ ! -x "$VENV_DIR/bin/python" ]; then
@@ -160,30 +171,36 @@ ENV_FILE="$BACKEND_DIR/.env"
 #   2. $APP_DIR/.env.production          (depose dans /opt/gemini-perso)
 #   3. $FORGE_WORKSPACE/backend/.env     (workspace Forge du serveur)
 #   4. $BACKEND_DIR/.env.example         (gabarit, valeurs a verifier ensuite)
-ENV_CREATED=0
+ENV_FROM_SOURCE=0
+ENV_FROM_TEMPLATE=0
 if [ ! -f "$ENV_FILE" ]; then
   if [ -n "$ENV_SOURCE" ]; then
     [ -f "$ENV_SOURCE" ] || die "ENV_SOURCE introuvable : $ENV_SOURCE"
     c_info "Copie du .env depuis $ENV_SOURCE ..."
     install -o "$APP_USER" -g "$APP_USER" -m 600 "$ENV_SOURCE" "$ENV_FILE"
+    ENV_FROM_SOURCE=1
   elif [ -f "$APP_DIR/.env.production" ]; then
     c_info "Copie du .env depuis $APP_DIR/.env.production ..."
     install -o "$APP_USER" -g "$APP_USER" -m 600 "$APP_DIR/.env.production" "$ENV_FILE"
+    ENV_FROM_SOURCE=1
   elif [ -f "$FORGE_WORKSPACE/backend/.env" ]; then
     c_info "Copie du .env depuis le workspace Forge : $FORGE_WORKSPACE/backend/.env ..."
     install -o "$APP_USER" -g "$APP_USER" -m 600 "$FORGE_WORKSPACE/backend/.env" "$ENV_FILE"
+    ENV_FROM_SOURCE=1
   elif [ -f "$BACKEND_DIR/.env.example" ]; then
     c_warn ".env absent : creation depuis .env.example (VERIFIEZ ses valeurs)"
     cp "$BACKEND_DIR/.env.example" "$ENV_FILE"
     chmod 600 "$ENV_FILE"
+    ENV_FROM_TEMPLATE=1
   else
     die "Aucun .env fourni. Deposez $APP_DIR/.env.production, le workspace Forge ($FORGE_WORKSPACE/backend/.env) ou passez --env-source <fichier>, puis relancez."
   fi
-  ENV_CREATED=1
 fi
 
-# Un .env existant n'est jamais modifie. Seule une creation neuve est completee.
-if [ "$ENV_CREATED" = "1" ]; then
+# Seul un .env cree depuis le gabarit est complete. Un .env copie depuis une
+# source (workspace Forge, .env.production, --env-source) est preserve tel quel :
+# ses secrets et valeurs ne sont jamais ecrases.
+if [ "$ENV_FROM_TEMPLATE" = "1" ]; then
   JWT="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
   set_env_key "$ENV_FILE" "JWT_SECRET" "$JWT"
   set_env_key "$ENV_FILE" "PUBLIC_URL" "https://$DOMAIN"
@@ -216,6 +233,8 @@ if [ "$ENV_CREATED" = "1" ]; then
   # GOOGLE_REDIRECT_URI vide = detection auto <PUBLIC_URL>/api/auth/google/callback
   set_env_key "$ENV_FILE" "GOOGLE_REDIRECT_URI" ""
   c_warn "VERIFIEZ $ENV_FILE (MONGO_URL, secrets, Google OAuth) puis relancez si besoin."
+elif [ "$ENV_FROM_SOURCE" = "1" ]; then
+  c_ok ".env copie depuis une source (preserve tel quel, non modifie)."
 else
   c_ok ".env deja present (non modifie)."
 fi

@@ -56,7 +56,19 @@ done
 [ "$(id -u)" -eq 0 ] || die "a lancer en root : sudo bash upgrade.sh"
 [ -f "$BACKEND_DIR/server.py" ] || die "$APP_DIR ne ressemble pas a Assistant-Chat"
 [ -x "$VENV_DIR/bin/pip" ] || die "venv introuvable dans $VENV_DIR — lancer d'abord install.sh"
+
+# Les repertoires d'ecriture de l'utilisateur applicatif doivent lui appartenir
+# (le depot peut avoir ete clone par un autre utilisateur).
+chown -R "$APP_USER":"$APP_USER" "$BACKEND_DIR" 2>/dev/null || true
+install -d -o "$APP_USER" -g "$APP_USER" -m 0755 "$VENV_DIR"
+chown -R "$APP_USER":"$APP_USER" "$VENV_DIR" 2>/dev/null || true
+
 cd "$APP_DIR"
+
+# Le depot peut avoir ete clone par un utilisateur non-root (ex. quentin) :
+# on declare le dossier sur pour git afin d'eviter "dubious ownership".
+git config --global --get-all safe.directory 2>/dev/null | grep -qx "$APP_DIR" ||
+  git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
 
 STAMP="$(date +%Y%m%d-%H%M%S)"
 

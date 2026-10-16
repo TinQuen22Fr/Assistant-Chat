@@ -68,6 +68,10 @@ cp /var/www/forge/workspace/Assistant-Chat/backend/.env /opt/gemini-perso/.env.p
 
 > Le chemin du workspace Forge est surchargeable :
 > `sudo bash install.sh --forge-workspace /var/www/forge/workspace/Assistant-Chat ...`
+>
+> Le dépôt étant cloné par `quentin` dans `/opt/gemini-perso`, `install.sh` et
+> `upgrade.sh` remettent `backend/` et `venv/` au nom de l'utilisateur `gemini`
+> avant toute écriture (sinon `python3 -m venv` échoue en « Permission denied »).
 
 Clés à renseigner/vérifier avant lancement (valeurs cible prod) :
 
@@ -96,8 +100,8 @@ sudo bash install.sh --domain gemini-memory-assistant.quentin-astro.fr --branch 
 ```
 
 Ce que fait `install.sh` :
-1. Bascule sur la branche `Make-With-Forge` (ou `--branch` explicite).
-2. Crée l'utilisateur système `gemini`, le venv Python, installe `backend/requirements.txt`.
+1. Déclare `/opt/gemini-perso` comme dépôt sûr pour git (`safe.directory`) puis bascule sur la branche `Make-With-Forge` (ou `--branch` explicite).
+2. Crée l'utilisateur système `gemini`, donne à `gemini` la propriété de `backend/` et de `venv/` (le dépôt peut avoir été cloné par `quentin` : `chown` récursif avant toute écriture), crée le venv Python, installe `backend/requirements.txt`.
 3. **Ne touche pas** au `.env` déjà présent (ne l'écrase jamais).
 4. Construit le frontend (`npm ci` + `npm run build`).
 5. Installe le service systemd `gemini-perso`, le redémarre, vérifie `/api/`.
@@ -161,3 +165,5 @@ Ce que fait `upgrade.sh` :
 | certbot échoue | DNS absent / port 80 non accessible : vérifier le A et Nginx |
 | « redirect_uri_mismatch » | URI Google Console ≠ `GOOGLE_REDIRECT_URI` |
 | Déconnexion immédiate | `COOKIE_SECURE=true` requis en HTTPS ; vérifier `CORS_ORIGINS`/`FRONTEND_URL` |
+| `Permission denied: '/opt/gemini-perso/venv'` | dépôt cloné par un autre utilisateur : relancer `sudo bash install.sh` (le script remet `backend/` et `venv/` à `gemini`) |
+| `detected dubious ownership` | relancer `sudo bash install.sh` (ajout automatique de `safe.directory`) |
