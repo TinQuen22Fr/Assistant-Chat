@@ -3,30 +3,32 @@
 Procédure pour déployer **Gemini Perso** sur la Dedibox, domaine **`gemini-memory-assistant.quentin-astro.fr`**.
 
 > Architecture : `Navigateur → Nginx (443) → /  : frontend/build (statique)` · `→ /api : uvicorn 127.0.0.1:8001 → MongoDB 127.0.0.1:27017`
+>
+> **Prérequis de compte** : un utilisateur non-root disposant des droits `sudo`. Les scripts `install.sh` et `upgrade.sh` exigent `root` (ils s'arrêtent si `id -u` != 0) ; ils doivent donc être lancés via `sudo bash ...`.
 
 ---
 
 ## 1. Prérequis serveur
 
-À exécuter en **root** sur la Dedibox :
+À exécuter avec `sudo` sur la Dedibox :
 
 ```bash
-apt update
-apt install -y nginx certbot python3-certbot-nginx python3 python3-venv git curl
+sudo apt update
+sudo apt install -y nginx certbot python3-certbot-nginx python3 python3-venv git curl
 
 # Node.js (version LTS, ex. 22)
-curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-apt install -y nodejs
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash -
+sudo apt install -y nodejs
 
 # MongoDB (ex. 7.0 sur Ubuntu 24.04)
-curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-7.gpg
+curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | sudo gpg --dearmor -o /usr/share/keyrings/mongodb-7.gpg
 echo "deb [signed-by=/usr/share/keyrings/mongodb-7.gpg] https://repo.mongodb.org/apt/ubuntu noble/mongodb-org/7.0 multiverse" \
-  | tee /etc/apt/sources.list.d/mongodb-org-7.0.list
-apt update && apt install -y mongodb-org
+  | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+sudo apt update && sudo apt install -y mongodb-org
 
 # Démarrer MongoDB
-systemctl enable --now mongod
-systemctl status mongod --no-pager
+sudo systemctl enable --now mongod
+sudo systemctl status mongod --no-pager
 ```
 
 **Indispensable avant la suite :**
@@ -38,7 +40,8 @@ systemctl status mongod --no-pager
 ## 2. Cloner le dépôt
 
 ```bash
-mkdir -p /opt/gemini-perso
+sudo mkdir -p /opt/gemini-perso
+sudo chown -R "$USER":"$USER" /opt/gemini-perso
 cd /opt/gemini-perso
 git clone https://github.com/TinQuen22Fr/Assistant-Chat.git .
 ```
@@ -51,15 +54,16 @@ Les fichiers `.env.example` ne sont **pas** versionnés dans Git. Le `.env` rée
 
 ```bash
 # Depuis VOTRE poste (pas la Dedibox) :
-scp backend/.env root@<IP_DEDIBOX>:/opt/gemini-perso/backend/.env
+scp backend/.env <USER>@<IP_DEDIBOX>:/tmp/gemini-perso.env
 ```
 
-Puis **sur la Dedibox**, adapter les clés suivantes au domaine de production :
+Puis **sur la Dedibox**, placer le fichier et adapter les clés suivantes au domaine de production :
 
 ```bash
+sudo install -o "$USER" -g "$USER" -m 600 /tmp/gemini-perso.env /opt/gemini-perso/backend/.env
+sudo rm -f /tmp/gemini-perso.env
 cd /opt/gemini-perso
 nano backend/.env
-chmod 600 backend/.env
 ```
 
 Clés à adapter (les valeurs indiquent la cible prod) :
@@ -70,7 +74,7 @@ FRONTEND_URL=https://gemini-memory-assistant.quentin-astro.fr
 GOOGLE_REDIRECT_URI=https://gemini-memory-assistant.quentin-astro.fr/api/auth/google/callback
 CORS_ORIGINS=https://gemini-memory-assistant.quentin-astro.fr
 COOKIE_SECURE=true
-MONGO_URL=mongodb://127.0.0.1:27017
+MONGO_URL=***REDACTED***
 FILES_DIR=/var/lib/gemini-perso/files
 ```
 
@@ -83,7 +87,7 @@ FILES_DIR=/var/lib/gemini-perso/files
 
 ```bash
 cd /opt/gemini-perso
-bash install.sh --domain gemini-memory-assistant.quentin-astro.fr --branch Make-With-Forge
+sudo bash install.sh --domain gemini-memory-assistant.quentin-astro.fr --branch Make-With-Forge
 ```
 
 Ce que fait `install.sh` :
@@ -99,10 +103,10 @@ Ce que fait `install.sh` :
 ## 5. Vérifier l'installation
 
 ```bash
-systemctl status gemini-perso --no-pager
-journalctl -u gemini-perso -f          # Ctrl+C pour sortir
-curl -s http://127.0.0.1:8001/api/     # doit répondre (JSON)
-nginx -t
+sudo systemctl status gemini-perso --no-pager
+sudo journalctl -u gemini-perso -f          # Ctrl+C pour sortir
+curl -s http://127.0.0.1:8001/api/          # doit répondre (JSON)
+sudo nginx -t
 curl -sI https://gemini-memory-assistant.quentin-astro.fr/api/
 ```
 
@@ -124,14 +128,14 @@ Protocole, domaine et trailing slash doivent correspondre exactement, sinon `red
 
 ```bash
 cd /opt/gemini-perso
-bash upgrade.sh
+sudo bash upgrade.sh
 ```
 
 Variantes :
 
 ```bash
-bash upgrade.sh --branch Make-With-Forge   # branche explicite
-bash upgrade.sh --no-pull                  # sans toucher à git (reconstruit seulement)
+sudo bash upgrade.sh --branch Make-With-Forge   # branche explicite
+sudo bash upgrade.sh --no-pull                  # sans toucher à git (reconstruit seulement)
 ```
 
 Ce que fait `upgrade.sh` :
@@ -147,8 +151,8 @@ Ce que fait `upgrade.sh` :
 
 | Symptôme | Piste |
 |---|---|
-| 502 Bad Gateway | `systemctl status gemini-perso`, `journalctl -u gemini-perso -n 100` |
-| Service en échec au démarrage | MongoDB non démarré : `systemctl status mongod` |
+| 502 Bad Gateway | `sudo systemctl status gemini-perso`, `sudo journalctl -u gemini-perso -n 100` |
+| Service en échec au démarrage | MongoDB non démarré : `sudo systemctl status mongod` |
 | certbot échoue | DNS absent / port 80 non accessible : vérifier le A et Nginx |
 | « redirect_uri_mismatch » | URI Google Console ≠ `GOOGLE_REDIRECT_URI` |
 | Déconnexion immédiate | `COOKIE_SECURE=true` requis en HTTPS ; vérifier `CORS_ORIGINS`/`FRONTEND_URL` |
