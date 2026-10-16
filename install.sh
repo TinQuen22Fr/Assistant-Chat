@@ -16,6 +16,7 @@
 #   sudo bash install.sh --branch Make-With-Forge
 #   sudo bash install.sh --env-source /opt/gemini-perso/backend/.env
 #   sudo bash install.sh --forge-workspace /var/www/forge/workspace/Assistant-Chat
+#   sudo bash install.sh --email quentin.dumont.22@gmail.com   # email certbot/ACME
 #   sudo bash install.sh --skip-nginx
 #
 set -euo pipefail
@@ -40,6 +41,11 @@ WORK_BRANCH="${WORK_BRANCH:-Make-With-Forge}"
 
 BRANCH="${BRANCH:-}"
 ENV_SOURCE="${ENV_SOURCE:-}"
+# Email transmis a certbot (ACME). Priorite : --email > $CERTBOT_EMAIL >
+# ADMIN_EMAIL du .env > CERTBOT_EMAIL_FALLBACK. Sert seulement aux
+# notifications d'expiration du certificat.
+CERTBOT_EMAIL="${CERTBOT_EMAIL:-}"
+CERTBOT_EMAIL_FALLBACK="${CERTBOT_EMAIL_FALLBACK:-quentin.dumont.22@gmail.com}"
 DO_NGINX=1
 DO_CERTBOT=1
 
@@ -61,6 +67,7 @@ while [ $# -gt 0 ]; do
     --skip-nginx)  DO_NGINX=0 ;;
     --env-source)  ENV_SOURCE="${2:-}"; shift ;;
     --forge-workspace) FORGE_WORKSPACE="${2:-}"; shift ;;
+    --email)       CERTBOT_EMAIL="${2:-}"; shift ;;
     --skip-certbot) DO_CERTBOT=0 ;;
     -h|--help)     sed -n '1,40p' "$0"; exit 0 ;;
     *) echo "Option inconnue : $1"; exit 1 ;;
@@ -165,6 +172,22 @@ for line in lines:
 if not found:
     out.append(f'{k}={v}')
 p.write_text('\n'.join(out) + '\n')
+PY
+}
+
+env_key() { # file key -> valeur (vide si absente), lecture seule
+  python3 - "$1" "$2" <<'PY'
+import sys, re, pathlib
+f, k = sys.argv[1], sys.argv[2]
+p = pathlib.Path(f)
+if not p.exists():
+    sys.exit(0)
+for line in p.read_text().splitlines():
+    m = re.match(rf'^(?:export\s+)?{re.escape(k)}=(.*)$', line.strip())
+    if m:
+        v = m.group(1).strip().strip('"').strip("'")
+        print(v)
+        break
 PY
 }
 
@@ -343,9 +366,24 @@ NGINX_ACME
   elif [ "$DO_CERTBOT" = "1" ]; then
     c_info "Obtention du certificat HTTPS (certbot) ..."
     CERT_ARGS=(--webroot -w "$ACME_DIR" -d "$DOMAIN" --non-interactive --agree-tos)
-    if [ -n "${CERTBOT_EMAIL:-$ADMIN_EMAIL}" ]; then
-      CERT_ARGS+=(-m "${CERTBOT_EMAIL:-$ADMIN_EMAIL}")
+    # ADMIN_EMAIL n'est defini que si le .env a ete cree depuis le gabarit : on
+    # le relit depuis le .env pour les installations dont le .env vient d'une
+    # source (sinon "unbound variable" sous set -u).
+    EMAIL="${CERTBOT_EMAIL:-}"
+    if [ -z "$EMAIL" ] && [ -f "$ENV_FILE" ]; then
+      EMAIL="$(env_key "$ENV_FILE" ADMIN_EMAIL)"
+      [ "$EMAIL" = "admin@example.fr" ] && EMAIL=""
+      [ "$EMAIL" = "admin@local.dev" ] && EMAIL=""
+    fi
+    if [ -z "$EMAIL" ] && [ -t 0 ]; then
+      read -r -p "Email pour certbot (Let's Encrypt) [$CERTBOT_EMAIL_FALLBACK] : " EMAIL
+    fi
+    EMAIL="${EMAIL:-$CERTBOT_EMAIL_FALLBACK}"
+    if [ -n "$EMAIL" ]; then
+      CERT_ARGS+=(-m "$EMAIL")
+      c_info "Email ACME : $EMAIL"
     else
+      c_warn "Aucun email ACME : enregistrement sans notification d'expiration."
       CERT_ARGS+=(--register-unsafely-without-email)
     fi
     if certbot certonly "${CERT_ARGS[@]}" --keep-until-expiring; then

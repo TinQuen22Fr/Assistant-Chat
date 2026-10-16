@@ -33,6 +33,7 @@ sudo systemctl status mongod --no-pager
 
 **Indispensable avant la suite :**
 - Le DNS **A** de `gemini-memory-assistant.quentin-astro.fr` doit pointer vers l'IP publique de la Dedibox (sinon certbot échoue).
+- Email certbot (ACME) : `--email <adresse>`, ou `CERTBOT_EMAIL=<adresse>` dans l'environnement, ou `ADMIN_EMAIL` du `.env`. À défaut, une adresse par défaut est utilisée (`CERTBOT_EMAIL_FALLBACK`, surchargeable). L'email ne sert qu'aux notifications d'expiration Let's Encrypt.
 - MongoDB doit être **démarré** (sinon `gemini-perso.service` plante).
 
 ---
@@ -163,6 +164,7 @@ Ce que fait `upgrade.sh` :
 | 502 Bad Gateway | `sudo systemctl status gemini-perso`, `sudo journalctl -u gemini-perso -n 100` |
 | Service en échec au démarrage | MongoDB non démarré : `sudo systemctl status mongod` |
 | certbot échoue | DNS absent / port 80 non accessible : vérifier le A et Nginx |
+| `install.sh: line 346: ADMIN_EMAIL: unbound variable` | `.env` copié depuis une source : `ADMIN_EMAIL` n'était pas défini dans le script. Corrigé : `install.sh` résout l'email certbot via `--email`, `$CERTBOT_EMAIL`, `ADMIN_EMAIL` du `.env`, sinon `CERTBOT_EMAIL_FALLBACK`. |
 | « redirect_uri_mismatch » | URI Google Console ≠ `GOOGLE_REDIRECT_URI` |
 | Déconnexion immédiate | `COOKIE_SECURE=true` requis en HTTPS ; vérifier `CORS_ORIGINS`/`FRONTEND_URL` |
 | `Permission denied: '/opt/gemini-perso/venv'` | dépôt cloné par un autre utilisateur : relancer `sudo bash install.sh` (le script remet `backend/` et `venv/` à `gemini`) |
