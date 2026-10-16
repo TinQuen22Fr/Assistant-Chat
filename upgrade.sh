@@ -163,21 +163,32 @@ fi
 # --- Backend : dependances ---------------------------------------------------------
 if [ "$DO_BACKEND" = "1" ]; then
   c_step "Backend : dependances"
-  sudo -u "$APP_USER" "$VENV_DIR/bin/pip" install --upgrade pip --quiet
-  sudo -u "$APP_USER" "$VENV_DIR/bin/pip" install -r "$BACKEND_DIR/requirements.txt" --quiet
+  # HOME de l'utilisateur systeme possiblement non inscriptible : cache pip
+  # explicite et propriete de $APP_USER pour eviter les WARNING.
+  PIP_CACHE_DIR="${PIP_CACHE_DIR:-$APP_DIR/.cache/pip}"
+  install -d -o "$APP_USER" -g "$APP_USER" -m 0750 "$PIP_CACHE_DIR"
+  sudo -u "$APP_USER" env PIP_CACHE_DIR="$PIP_CACHE_DIR" "$VENV_DIR/bin/pip" install --upgrade pip --quiet
+  sudo -u "$APP_USER" env PIP_CACHE_DIR="$PIP_CACHE_DIR" "$VENV_DIR/bin/pip" install -r "$BACKEND_DIR/requirements.txt" --quiet
   c_ok "dependances Python installees"
 fi
 
 # --- Frontend : build --------------------------------------------------------------
 if [ "$DO_FRONTEND" = "1" ]; then
   c_step "Frontend : build"
+  # Cache npm (frontend/.npmrc -> ../.npm-cache) et node_modules peuvent
+  # appartenir a root : npm en tant que $APP_USER echoue en EACCES sur le cache
+  # et laisse un node_modules partiel. Cache explicite + purge prealable.
+  NPM_CACHE_DIR="${NPM_CACHE_DIR:-$APP_DIR/.npm-cache}"
+  install -d -o "$APP_USER" -g "$APP_USER" -m 0750 "$NPM_CACHE_DIR"
+  chown -R "$APP_USER":"$APP_USER" "$NPM_CACHE_DIR" 2>/dev/null || true
+  rm -rf "$FRONTEND_DIR/node_modules"
   chown -R "$APP_USER":"$APP_USER" "$FRONTEND_DIR" 2>/dev/null || true
   if [ -f "$FRONTEND_DIR/package-lock.json" ]; then
-    (cd "$FRONTEND_DIR" && sudo -u "$APP_USER" npm ci --legacy-peer-deps)
+    (cd "$FRONTEND_DIR" && sudo -u "$APP_USER" env npm_config_cache="$NPM_CACHE_DIR" npm ci --legacy-peer-deps)
   else
-    (cd "$FRONTEND_DIR" && sudo -u "$APP_USER" npm install --legacy-peer-deps)
+    (cd "$FRONTEND_DIR" && sudo -u "$APP_USER" env npm_config_cache="$NPM_CACHE_DIR" npm install --legacy-peer-deps)
   fi
-  (cd "$FRONTEND_DIR" && sudo -u "$APP_USER" npm run build)
+  (cd "$FRONTEND_DIR" && sudo -u "$APP_USER" env npm_config_cache="$NPM_CACHE_DIR" npm run build)
   c_ok "build genere dans $FRONTEND_DIR/build/"
 fi
 

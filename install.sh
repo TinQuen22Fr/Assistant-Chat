@@ -135,13 +135,18 @@ chown -R "$APP_USER":"$APP_USER" "$VENV_DIR" 2>/dev/null || true
 # --- Backend : venv + dependances ---------------------------------------------
 c_info "Backend : environnement virtuel ..."
 if [ ! -x "$VENV_DIR/bin/python" ]; then
-  sudo -u "$APP_USER" python3 -m venv "$VENV_DIR"
+  sudo -u "$APP_USER" env PIP_NO_CACHE_DIR=1 python3 -m venv "$VENV_DIR"
   c_ok "venv cree dans $VENV_DIR"
 else
   c_ok "venv deja present."
 fi
-sudo -u "$APP_USER" "$VENV_DIR/bin/pip" install --upgrade pip --quiet
-sudo -u "$APP_USER" "$VENV_DIR/bin/pip" install -r "$BACKEND_DIR/requirements.txt" --quiet
+# Le HOME de l'utilisateur systeme peut pointer sur un dossier appartenant a un
+# autre utilisateur : pip tenterait d'y ecrire son cache et emettrait un
+# WARNING. On rend le cache explicite et accessible, propriete de $APP_USER.
+PIP_CACHE_DIR="${PIP_CACHE_DIR:-$APP_DIR/.cache/pip}"
+install -d -o "$APP_USER" -g "$APP_USER" -m 0750 "$PIP_CACHE_DIR"
+sudo -u "$APP_USER" env PIP_CACHE_DIR="$PIP_CACHE_DIR" "$VENV_DIR/bin/pip" install --upgrade pip --quiet
+sudo -u "$APP_USER" env PIP_CACHE_DIR="$PIP_CACHE_DIR" "$VENV_DIR/bin/pip" install -r "$BACKEND_DIR/requirements.txt" --quiet
 c_ok "Dependances Python installees."
 
 # --- Backend : .env (jamais d'ecrasement) --------------------------------------
@@ -241,14 +246,25 @@ fi
 chmod 600 "$ENV_FILE" 2>/dev/null || true
 # --- Frontend : build de production -------------------------------------------
 c_info "Frontend : installation des dependances ..."
+# npm tourne en tant que $APP_USER. Deux pieges apres une execution precedente
+# en root : le cache npm (frontend/.npmrc -> ../.npm-cache) et node_modules
+# appartiennent a root. npm echoue alors en
+# "EACCES: mkdir /opt/gemini-perso/.npm-cache" et laisse un node_modules
+# partiel (TAR_ENTRY_ERROR ENOENT / ENOTEMPTY cleanup). On force donc un cache
+# explicite propriete de $APP_USER et on purge node_modules avant installation
+# (root peut supprimer des fichiers appartenant a root, gemini non).
+NPM_CACHE_DIR="${NPM_CACHE_DIR:-$APP_DIR/.npm-cache}"
+install -d -o "$APP_USER" -g "$APP_USER" -m 0750 "$NPM_CACHE_DIR"
+chown -R "$APP_USER":"$APP_USER" "$NPM_CACHE_DIR" 2>/dev/null || true
+rm -rf "$FRONTEND_DIR/node_modules"
 chown -R "$APP_USER":"$APP_USER" "$FRONTEND_DIR" 2>/dev/null || true
 if [ -f "$FRONTEND_DIR/package-lock.json" ]; then
-  (cd "$FRONTEND_DIR" && sudo -u "$APP_USER" npm ci --legacy-peer-deps)
+  (cd "$FRONTEND_DIR" && sudo -u "$APP_USER" env npm_config_cache="$NPM_CACHE_DIR" npm ci --legacy-peer-deps)
 else
-  (cd "$FRONTEND_DIR" && sudo -u "$APP_USER" npm install --legacy-peer-deps)
+  (cd "$FRONTEND_DIR" && sudo -u "$APP_USER" env npm_config_cache="$NPM_CACHE_DIR" npm install --legacy-peer-deps)
 fi
 c_info "Frontend : build Vite ..."
-(cd "$FRONTEND_DIR" && sudo -u "$APP_USER" npm run build)
+(cd "$FRONTEND_DIR" && sudo -u "$APP_USER" env npm_config_cache="$NPM_CACHE_DIR" npm run build)
 c_ok "Build genere dans $FRONTEND_DIR/build/"
 
 # --- Service systemd -----------------------------------------------------------

@@ -167,3 +167,6 @@ Ce que fait `upgrade.sh` :
 | Déconnexion immédiate | `COOKIE_SECURE=true` requis en HTTPS ; vérifier `CORS_ORIGINS`/`FRONTEND_URL` |
 | `Permission denied: '/opt/gemini-perso/venv'` | dépôt cloné par un autre utilisateur : relancer `sudo bash install.sh` (le script remet `backend/` et `venv/` à `gemini`) |
 | `detected dubious ownership` | relancer `sudo bash install.sh` (ajout automatique de `safe.directory`) |
+| `WARNING: The directory '/opt/gemini-perso/.cache/pip' ... is not writable` | bénin : le `HOME` de l'utilisateur `gemini` n'est pas inscriptible. `install.sh`/`upgrade.sh` forcent désormais `PIP_CACHE_DIR=/opt/gemini-perso/.cache/pip` (propriété de `gemini`). Relancer le script ; le warning disparaît. |
+| `npm error EACCES: mkdir '/opt/gemini-perso/.npm-cache'` | cache npm appartient à `root` (dépôt cloné puis script relancé en root). `install.sh`/`upgrade.sh` forcent `npm_config_cache=/opt/gemini-perso/.npm-cache` (propriété de `gemini`) et purgent `node_modules`. Relancer le script. |
+| `npm warn TAR_ENTRY_ERROR ENOENT` / `npm warn cleanup ENOTEMPTY` | `node_modules` partiellement écrit par une exécution root précédente. `install.sh`/`upgrade.sh` font désormais `rm -rf frontend/node_modules` avant `npm ci`. Relancer le script. |
