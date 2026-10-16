@@ -230,18 +230,34 @@ async def refresh(request: Request, response: Response):
 
 # ---------- Google: own OAuth2 client (self-hosted) ----------
 
-def _frontend_url(path: str = "/") -> str:
-    return os.environ["FRONTEND_URL"].rstrip("/") + path
+def public_base_url(request: Request) -> str:
+    """URL publique du site. Priorité: PUBLIC_URL, puis détection via les en-têtes du proxy."""
+    configured = os.environ.get("PUBLIC_URL", "").strip()
+    if configured:
+        return configured.rstrip("/")
+    proto = request.headers.get("x-forwarded-proto", request.url.scheme).split(",")[0].strip()
+    host = (request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc)
+    return f"{proto}://{host.split(',')[0].strip()}"
+
+
+def _frontend_url(request: Request, path: str = "/") -> str:
+    base = os.environ.get("FRONTEND_URL", "").strip() or public_base_url(request)
+    return base.rstrip("/") + path
+
+
+def _google_redirect_uri(request: Request) -> str:
+    explicit = os.environ.get("GOOGLE_REDIRECT_URI", "").strip()
+    return explicit or public_base_url(request) + "/api/auth/google/callback"
 
 
 @router.get("/google/login")
-async def google_login():
+async def google_login(request: Request):
     if google_mode() != "oauth":
         raise HTTPException(404, "OAuth Google non configuré.")
     state = secrets.token_urlsafe(24)
     params = {
         "client_id": os.environ["GOOGLE_CLIENT_ID"],
-        "redirect_uri": os.environ["GOOGLE_REDIRECT_URI"],
+        "redirect_uri": _google_redirect_uri(request),
         "response_type": "code",
         "scope": "openid email profile",
         "state": state,
@@ -254,7 +270,7 @@ async def google_login():
 
 @router.get("/google/callback")
 async def google_callback(request: Request, code: str = "", state: str = ""):
-    fail = RedirectResponse(_frontend_url("/login?erreur=google"))
+    fail = RedirectResponse(_frontend_url(request, "/login?erreur=google"))
     if google_mode() != "oauth" or not code or state != request.cookies.get("oauth_state"):
         return fail
     async with httpx.AsyncClient(timeout=15) as client:
@@ -262,7 +278,7 @@ async def google_callback(request: Request, code: str = "", state: str = ""):
             "code": code,
             "client_id": os.environ["GOOGLE_CLIENT_ID"],
             "client_secret": os.environ["GOOGLE_CLIENT_SECRET"],
-            "redirect_uri": os.environ["GOOGLE_REDIRECT_URI"],
+            "redirect_uri": _google_redirect_uri(request),
             "grant_type": "authorization_code",
         })
         if token_res.status_code != 200:
@@ -274,7 +290,7 @@ async def google_callback(request: Request, code: str = "", state: str = ""):
     if not info.get("email") or not info.get("email_verified"):
         return fail
     user = await upsert_google_user(info["email"], info.get("name"), info.get("picture"))
-    resp = RedirectResponse(_frontend_url("/"))
+    resp = RedirectResponse(_frontend_url(request, "/"))
     resp.delete_cookie("oauth_state", path="/")
     set_auth_cookies(resp, user["user_id"])
     return resp

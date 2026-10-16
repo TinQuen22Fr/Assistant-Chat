@@ -21,7 +21,7 @@ export const GoogleButton = () => {
     window.location.href = `${API}/auth/google/login`;
   };
 
-  if (mode === "disabled") return null;
+  const disabled = mode === "disabled";
 
   return (
     <>
@@ -29,11 +29,12 @@ export const GoogleButton = () => {
         type="button"
         data-testid="google-login-button"
         onClick={start}
-        disabled={!mode}
-        className="flex h-12 w-full items-center justify-center gap-3 rounded-full border border-slate-300 bg-white text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
+        disabled={!mode || disabled}
+        title={disabled ? "Connexion Google non configurée (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET manquants)" : undefined}
+        className="flex h-12 w-full items-center justify-center gap-3 rounded-full border border-slate-300 bg-white text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <GoogleIcon />
-        Se connecter avec Google
+        {disabled ? "Google non configuré" : "Se connecter avec Google"}
       </button>
       <div className="flex items-center gap-3 text-xs uppercase tracking-wider text-slate-400">
         <span className="h-px flex-1 bg-slate-200" /> ou <span className="h-px flex-1 bg-slate-200" />

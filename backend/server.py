@@ -65,7 +65,7 @@ async def deploy_bundle():
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ["CORS_ORIGINS"].split(","),
+    allow_origins=[o.strip() for o in (os.environ["CORS_ORIGINS"].split(",") + [os.environ.get("PUBLIC_URL", "")]) if o.strip()],
     allow_methods=["*"],
     allow_headers=["*"],
 )
