@@ -125,7 +125,7 @@ sudo nginx -t && sudo systemctl reload nginx
 ```
 
 Points importants de `deploy/nginx.conf` :
-- `client_max_body_size 250M` : imports Google Takeout volumineux ;
+- `client_max_body_size 5G` : imports Google Takeout volumineux ;
 - `proxy_buffering off` + `proxy_read_timeout 600s` sur `/api/` : affichage progressif (SSE) des réponses ;
 - `try_files … /index.html` : routes de l'application (`/c/…`, `/memoire`, `/importer`).
 
@@ -190,6 +190,6 @@ GOOGLE_REDIRECT_URI=https://gemini.example.fr/api/auth/google/callback
 |---|---|
 | 502 Bad Gateway | `systemctl status gemini-perso`, `journalctl -u gemini-perso -n 100` |
 | Réponses affichées d'un bloc | vérifier `proxy_buffering off` sur `location /api/` |
-| « 413 Request Entity Too Large » | `client_max_body_size 250M` dans le bloc `server` HTTPS |
+| « 413 Request Entity Too Large » | `client_max_body_size 5G` dans le bloc `server` HTTPS |
 | Déconnexion immédiate après login | HTTPS obligatoire avec `COOKIE_SECURE=true` ; vérifier `CORS_ORIGINS`/`FRONTEND_URL` |
 | Erreur Google « redirect_uri_mismatch » | l'URI de la console doit être identique à `GOOGLE_REDIRECT_URI` |

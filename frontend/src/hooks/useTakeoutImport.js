@@ -16,7 +16,7 @@ export function useTakeoutImport() {
 
   const upload = async (file) => {
     setError(null);
-    if (file.size > 250 * 1024 * 1024) return setError("Le fichier dépasse la limite de 250 Mo.");
+    if (file.size > 5 * 1024 * 1024 * 1024) return setError("Le fichier dépasse la limite de 5 Go.");
     setStep("uploading");
     setProgress(0);
     const form = new FormData();

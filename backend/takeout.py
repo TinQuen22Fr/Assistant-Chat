@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterator
 
-MAX_UPLOAD_BYTES = 250 * 1024 * 1024
+MAX_UPLOAD_BYTES = 5 * 1024 * 1024 * 1024
 CONVERSATION_GAP = timedelta(minutes=30)
 MAX_GROUP_ENTRIES = 300
 CHUNK = 1 << 20

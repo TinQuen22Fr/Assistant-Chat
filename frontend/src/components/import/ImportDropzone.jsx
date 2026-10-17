@@ -44,7 +44,7 @@ export const ImportDropzone = ({ imp }) => {
         <>
           <FileArchive className="h-10 w-10 text-slate-300" />
           <p className="mt-4 text-base font-medium text-slate-800">Déposez votre export Google Takeout ici</p>
-          <p className="mt-1 text-sm text-slate-500">.zip (jusqu'à 250 Mo), MyActivity.json ou MyActivity.html</p>
+          <p className="mt-1 text-sm text-slate-500">.zip (jusqu'à 5 Go), MyActivity.json ou MyActivity.html</p>
           <button
             data-testid="import-pick-file-button"
             onClick={() => inputRef.current.click()}

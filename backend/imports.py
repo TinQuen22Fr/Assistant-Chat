@@ -53,7 +53,7 @@ async def takeout_preview(file: UploadFile = File(...), user: dict = Depends(get
             if size > MAX_UPLOAD_BYTES:
                 out.close()
                 raw.unlink(missing_ok=True)
-                raise HTTPException(413, "Le fichier dépasse la limite de 250 Mo.")
+                raise HTTPException(413, "Le fichier dépasse la limite de 5 Go.")
             out.write(chunk)
     try:
         entries = await asyncio.to_thread(parse_takeout, raw)
