@@ -35,6 +35,17 @@ c_ok()   { printf '\033[1;32m  ok\033[0m %s\n' "$*"; }
 c_step() { printf '\n\033[1;36m==>\033[0m \033[1m%s\033[0m\n' "$*"; }
 c_warn() { printf '\033[1;33m  /!\\\033[0m %s\n' "$*"; }
 c_info() { printf '\033[36m[i]\033[0m %s\n' "$1"; }
+port_in_use() { # port -> 0 si un processus ecoute deja
+  python3 - "$1" <<'PY'
+import socket, sys
+s = socket.socket()
+s.settimeout(1)
+sys.exit(0 if s.connect_ex(("127.0.0.1", int(sys.argv[1]))) == 0 else 1)
+PY
+}
+api_is_ours() { # url -> 0 si la reponse porte la signature de notre API
+  curl -fsS -m 5 "$1" 2>/dev/null | grep -q '"Gemini Perso API"'
+}
 die()    { printf '\033[1;31mERREUR:\033[0m %s\n' "$*" >&2; exit 1; }
 
 while [ $# -gt 0 ]; do
@@ -212,25 +223,36 @@ if [ "$DO_SERVICE" = "1" ] && [ -f "$SERVICE_FILE" ]; then
   fi
   rm -f "$NEW_SERVICE"
 
+  # Meme controle que dans install.sh : un port tenu par un service etranger
+  # (API Forge) fait repondre 200 leur API, pas la notre.
+  if port_in_use "$BACKEND_PORT" && ! api_is_ours "http://127.0.0.1:${BACKEND_PORT}/api/"; then
+    die "Port $BACKEND_PORT occupe par un autre service (reponse etrangere). Liberez-le ou relancez avec --port <autre port>."
+  fi
+
   systemctl daemon-reload
   systemctl restart "$SERVICE"
   systemctl is-active --quiet "$SERVICE" || {
     journalctl -u "$SERVICE" -n 40 --no-pager
     die "$SERVICE ne demarre pas (journal ci-dessus)"
   }
-  c_ok "service actif"
+  sleep 3
+  NRESTARTS="$(systemctl show "$SERVICE" -p NRestarts --value 2>/dev/null || echo 0)"
+  if ! systemctl is-active --quiet "$SERVICE" || [ "${NRESTARTS:-0}" -gt 0 ]; then
+    journalctl -u "$SERVICE" -n 40 --no-pager
+    die "$SERVICE instable (NRestarts=${NRESTARTS:-0}) : verifiez $ENV_FILE (MONGO_URL, secrets)."
+  fi
+  c_ok "service actif (stable)"
 
   URL="http://127.0.0.1:${BACKEND_PORT}/api/"
-  CODE=000
+  OK=0
   for _ in $(seq 1 15); do
-    CODE="$(curl -s -o /dev/null -w '%{http_code}' -X GET "$URL" || echo 000)"
-    [ "$CODE" = "200" ] && break
+    if api_is_ours "$URL"; then OK=1; break; fi
     sleep 1
   done
-  if [ "$CODE" = "200" ]; then
-    c_ok "API /api/ repond 200"
+  if [ "$OK" = "1" ]; then
+    c_ok "API /api/ repond et porte la signature 'Gemini Perso API'"
   else
-    c_warn "API /api/ repond $CODE — inspecte : journalctl -u $SERVICE -n 50"
+    c_warn "API /api/ injoignable ou reponse inattendue — inspecte : journalctl -u $SERVICE -n 50"
   fi
 elif [ "$DO_SERVICE" = "1" ]; then
   c_warn "service $SERVICE absent — lancez install.sh d'abord."

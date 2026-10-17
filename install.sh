@@ -204,6 +204,24 @@ for line in p.read_text().splitlines():
 PY
 }
 
+# --- Helpers de verification ---------------------------------------------------
+# Le port par defaut (8001) est aussi utilise par d'autres services du serveur
+# (API Forge). Sans ces controles, uvicorn echouait en "address already in use"
+# ET le health-check interrogeait l'API du voisin, qui repondait 200 : succes
+# affiche alors que notre service ne tournait pas.
+port_in_use() { # port -> 0 si un processus ecoute deja
+  python3 - "$1" <<'PY'
+import socket, sys
+s = socket.socket()
+s.settimeout(1)
+sys.exit(0 if s.connect_ex(("127.0.0.1", int(sys.argv[1]))) == 0 else 1)
+PY
+}
+
+api_is_ours() { # url -> 0 si la reponse porte bien la signature de notre API
+  curl -fsS -m 5 "$1" 2>/dev/null | grep -q '"Gemini Perso API"'
+}
+
 ENV_FILE="$BACKEND_DIR/.env"
 
 # Le .env de production est fourni directement sur le serveur. Tout se fait
@@ -328,6 +346,23 @@ else
 fi
 rm -f "$NEW_SERVICE"
 
+# --- Backend : controle MONGO_URL (hote resolvable) -----------------------------
+MONGO_HOST="$(env_key "$ENV_FILE" MONGO_URL | sed -E 's#^[a-z+]+://##; s#^[^@]*@##; s#[/?:,].*$##')"
+if [ -n "$MONGO_HOST" ]; then
+  if python3 -c 'import socket,sys; socket.gethostbyname(sys.argv[1])' "$MONGO_HOST" >/dev/null 2>&1; then
+    c_ok "MONGO_URL : hote '$MONGO_HOST' resolu."
+  else
+    c_warn "MONGO_URL : hote '$MONGO_HOST' NON resolvable. Corrigez $ENV_FILE (echec au demarrage : Name or service not known)."
+  fi
+fi
+
+# --- Controle du port avant redemarrage -----------------------------------------
+# Si le port est tenu par un service etranger, on echoue explicitement au lieu de
+# tenter un demarrage condamne ("address already in use") et de valider a tort.
+if port_in_use "$BACKEND_PORT" && ! api_is_ours "http://127.0.0.1:${BACKEND_PORT}/api/"; then
+  die "Port $BACKEND_PORT deja occupe par un autre service (reponse etrangere). Liberez-le ou relancez avec --port <autre port>."
+fi
+
 # --- Redemarrage + verification -------------------------------------------------
 c_info "Redemarrage de $SERVICE_NAME ..."
 systemctl restart "$SERVICE_NAME"
@@ -335,19 +370,27 @@ systemctl is-active --quiet "$SERVICE_NAME" || {
   journalctl -u "$SERVICE_NAME" -n 40 --no-pager
   die "$SERVICE_NAME ne demarre pas."
 }
-c_ok "service actif"
+# Un service en boucle de redemarrage est "active" un court instant : on laisse
+# passer quelques secondes puis on controle le compteur systemd, sinon un crash
+# (Mongo injoignable) est rapporte comme un succes.
+sleep 3
+NRESTARTS="$(systemctl show "$SERVICE_NAME" -p NRestarts --value 2>/dev/null || echo 0)"
+if ! systemctl is-active --quiet "$SERVICE_NAME" || [ "${NRESTARTS:-0}" -gt 0 ]; then
+  journalctl -u "$SERVICE_NAME" -n 40 --no-pager
+  die "$SERVICE_NAME instable (NRestarts=${NRESTARTS:-0}) : corrigez $ENV_FILE (MONGO_URL, secrets) puis relancez."
+fi
+c_ok "service actif (stable)"
 
 URL="http://127.0.0.1:${BACKEND_PORT}/api/"
-CODE=000
+OK=0
 for _ in $(seq 1 15); do
-  CODE="$(curl -s -o /dev/null -w '%{http_code}' -X GET "$URL" || echo 000)"
-  [ "$CODE" = "200" ] && break
+  if api_is_ours "$URL"; then OK=1; break; fi
   sleep 1
 done
-if [ "$CODE" = "200" ]; then
-  c_ok "API /api/ repond 200."
+if [ "$OK" = "1" ]; then
+  c_ok "API /api/ repond et porte la signature 'Gemini Perso API'."
 else
-  c_warn "API /api/ repond $CODE — journalctl -u $SERVICE_NAME -n 50"
+  c_warn "API /api/ injoignable ou reponse inattendue — journalctl -u $SERVICE_NAME -n 50"
 fi
 
 # --- Nginx (multi-host) ----------------------------------------------------------
